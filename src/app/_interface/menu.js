@@ -1,6 +1,6 @@
 'use client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -15,6 +15,11 @@ export default function Menu() {
 
     const [buttonHovered, setButtonHovered] = useState(false);
     const pathname = usePathname();
+
+    useEffect(() => {
+        setButtonHovered(false);
+    }, [pathname]);
+
     return (
         <>
           <AnimatePresence mode='wait'>
@@ -27,7 +32,7 @@ export default function Menu() {
           >
             <div className='flex w-full'>
               <div className='basis-1/2 h-full font-montserrat-medium'>
-                   <motion.button whileHover={() => {setButtonHovered(true)}} className='flex gap-1' onHoverStart={() => setButtonHovered(true)} onHoverEnd={() => setButtonHovered(false)} >
+                   <motion.button className='flex gap-1' onHoverStart={() => setButtonHovered(true)} onHoverEnd={() => setButtonHovered(false)} >
                     <Link href="/">
                        Back 
                        <AnimatePresence mode='wait'>
