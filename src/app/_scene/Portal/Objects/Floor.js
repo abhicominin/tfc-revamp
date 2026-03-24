@@ -19,7 +19,8 @@ export default function Floor()
             maps[map].colorSpace = THREE.SRGBColorSpace
           }
           tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-          tex.repeat.set(120, 120);
+          tex.anisotropy = 16;
+          tex.repeat.set(400, 400);
           tex.needsUpdate = true;
         }
       }, []);
