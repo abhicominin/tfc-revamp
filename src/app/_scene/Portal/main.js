@@ -51,6 +51,7 @@ const PortalSetup = () => {
     uResolution: new THREE.Uniform(new THREE.Vector2()),
     uSceneOneTexture: new THREE.Uniform(null),
     uInitialTransition: new THREE.Uniform(0.0),
+    uNoiseTexture: new THREE.Uniform(null),
   }), []);
 
   useFrame((state, delta) => {
@@ -71,6 +72,7 @@ const PortalSetup = () => {
     gl.setRenderTarget(renderTargetOne);
     gl.render(sceneOne, cameraRef.current);
     mesh.current.material.uniforms.uSceneOneTexture.value = renderTargetOne.texture;
+    mesh.current.material.uniforms.uNoiseTexture.value = renderTargetOne.texture;
 
     // Reset to default framebuffer
     gl.setRenderTarget(null);

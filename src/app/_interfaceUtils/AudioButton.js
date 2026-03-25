@@ -1,6 +1,7 @@
 'use client';
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import useGlobalStore from '../globalstore';
 
 const BAR_COUNT = 5;
 
@@ -40,9 +41,10 @@ export default function AudioButton({ src = '/Audio/Meditation.mp3', volume = 0.
   const fadeTimerRef = useRef(null);
   const isPlayingRef = useRef(false);
   const volumeRef = useRef(volume);
-  const [isPlaying, setIsPlaying] = useState(false);
 
-  // Keep volumeRef current if prop changes
+  const isPlaying = useGlobalStore(s => s.playmusic);
+  const setPlayMusic = useGlobalStore(s => s.setPlayMusic);
+
   useEffect(() => { volumeRef.current = volume; }, [volume]);
 
   useEffect(() => {
@@ -50,64 +52,67 @@ export default function AudioButton({ src = '/Audio/Meditation.mp3', volume = 0.
     audio.loop = true;
     audio.volume = 0;
     audioRef.current = audio;
-
-    const handleEnded = () => {
-      isPlayingRef.current = false;
-      setIsPlaying(false);
-    };
-    audio.addEventListener('ended', handleEnded);
-
     return () => {
-      audio.removeEventListener('ended', handleEnded);
       clearInterval(fadeTimerRef.current);
       audio.pause();
       audio.src = '';
     };
   }, [src]);
 
-  // All logic in a stable callback that reads refs at call-time — no stale closure issues
-  const toggle = useCallback(() => {
+  const startPlayback = useCallback(() => {
     const audio = audioRef.current;
-    if (!audio) return;
-
+    if (!audio || isPlayingRef.current) return;
     clearInterval(fadeTimerRef.current);
-
-    if (isPlayingRef.current) {
-      // Fade out then pause
+    audio.volume = 0;
+    audio.play().catch(() => {
       isPlayingRef.current = false;
-      setIsPlaying(false);
-      const startVol = audio.volume;
-      let step = 0;
-      fadeTimerRef.current = setInterval(() => {
-        step++;
-        audio.volume = Math.max(startVol * (1 - step / FADE_STEPS), 0);
-        if (step >= FADE_STEPS) {
-          clearInterval(fadeTimerRef.current);
-          audio.volume = 0;
-          audio.pause();
-        }
-      }, FADE_INTERVAL_MS);
-    } else {
-      // Start playback then fade in
-      audio.volume = 0;
-      audio.play().catch(() => {
-        isPlayingRef.current = false;
-        setIsPlaying(false);
-      });
-      isPlayingRef.current = true;
-      setIsPlaying(true);
-      const targetVol = volumeRef.current;
-      let step = 0;
-      fadeTimerRef.current = setInterval(() => {
-        step++;
-        audio.volume = Math.min(targetVol * (step / FADE_STEPS), targetVol);
-        if (step >= FADE_STEPS) {
-          clearInterval(fadeTimerRef.current);
-          audio.volume = targetVol;
-        }
-      }, FADE_INTERVAL_MS);
-    }
-  }, []);
+      setPlayMusic(false);
+    });
+    isPlayingRef.current = true;
+    setPlayMusic(true);
+    const targetVol = volumeRef.current;
+    let step = 0;
+    fadeTimerRef.current = setInterval(() => {
+      step++;
+      audio.volume = Math.min(targetVol * (step / FADE_STEPS), targetVol);
+      if (step >= FADE_STEPS) {
+        clearInterval(fadeTimerRef.current);
+        audio.volume = targetVol;
+      }
+    }, FADE_INTERVAL_MS);
+  }, [setPlayMusic]);
+
+  const stopPlayback = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio || !isPlayingRef.current) return;
+    clearInterval(fadeTimerRef.current);
+    isPlayingRef.current = false;
+    setPlayMusic(false);
+    const startVol = audio.volume;
+    let step = 0;
+    fadeTimerRef.current = setInterval(() => {
+      step++;
+      audio.volume = Math.max(startVol * (1 - step / FADE_STEPS), 0);
+      if (step >= FADE_STEPS) {
+        clearInterval(fadeTimerRef.current);
+        audio.volume = 0;
+        audio.pause();
+      }
+    }, FADE_INTERVAL_MS);
+  }, [setPlayMusic]);
+
+  const toggle = useCallback(() => {
+    if (isPlayingRef.current) stopPlayback();
+    else startPlayback();
+  }, [startPlayback, stopPlayback]);
+
+  // Play triggered by loading screen click — runs synchronously inside the
+  // user-gesture call stack, so audio.play() is allowed by the browser
+  useEffect(() => {
+    const handle = () => startPlayback();
+    window.addEventListener('audio-unlock', handle, { once: true });
+    return () => window.removeEventListener('audio-unlock', handle);
+  }, [startPlayback]);
 
   return (
     <button
