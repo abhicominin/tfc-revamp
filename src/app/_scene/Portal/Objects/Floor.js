@@ -20,7 +20,7 @@ export default function Floor()
           }
           tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
           tex.anisotropy = 16;
-          tex.repeat.set(400, 400);
+          tex.repeat.set(170, 170);
           tex.needsUpdate = true;
         }
       }, []);

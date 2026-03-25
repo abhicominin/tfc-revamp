@@ -50,7 +50,7 @@ void main() {
     float maxDist = length(vec2(aspect * 0.5, 0.5));
     float radius  = uInitialTransition * (maxDist + 0.07);
 
-    float alpha = 1.0 - smoothstep(radius - 0.02, radius + 0.02, dist + noise);
+    float alpha = 1.0 - smoothstep(radius , radius , dist + noise);
 
     vec3 baseColor = texture2D(uSceneOneTexture, vUv).rgb;
 

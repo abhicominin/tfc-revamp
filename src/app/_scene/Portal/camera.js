@@ -1,5 +1,5 @@
-import { forwardRef, useLayoutEffect } from "react";
-import { OrthographicCamera } from "@react-three/drei";
+import { forwardRef, useLayoutEffect, useMemo } from "react";
+import { OrthographicCamera, Bounds } from "@react-three/drei";
 import { useThree } from "@react-three/fiber";
 
 const FRUSTUM = 3.5;
@@ -14,6 +14,7 @@ const CAMERA_CONFIG = {
 
 const Camera = forwardRef(( props, ref ) => {
     const { size } = useThree();
+
     
     // Rebuild frustum planes on viewport resize
     useLayoutEffect(() => {
@@ -28,13 +29,16 @@ const Camera = forwardRef(( props, ref ) => {
     }, [ref, size]);
 
     return (
-        <OrthographicCamera
-            ref={ref}
-            position={[5, 5, 5]}
-            near={0.1}
-            far={1000}
-            zoom={2.9}
-        />
+        <>
+         <OrthographicCamera
+             makeDefault
+             ref={ref}
+             position={[5, 5, 5]}
+             near={0.1}
+             far={100}
+             zoom={2.9}
+         />
+        </>
     );
 });
 

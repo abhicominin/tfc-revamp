@@ -1,8 +1,7 @@
 import { useFrame, useThree, createPortal } from "@react-three/fiber";
-import { useFBO } from "@react-three/drei";
-import { useRef, Suspense, useMemo } from "react";
+import { useFBO, useProgress } from "@react-three/drei";
+import { useRef, Suspense, useMemo, useEffect } from "react";
 import * as THREE from "three";
-import { useControls } from "leva";
 
 import vertexShader from "../Shaders/vertex.glsl";
 import fragmentShader from "../Shaders/fragment.glsl";
@@ -15,12 +14,28 @@ import Floor from "./Objects/Floor";
 const PortalSetup = () => {
   const mesh = useRef();
   const cameraRef = useRef();
-  const { viewport } = useThree();
+  const { viewport, gl } = useThree();
 
-  // Leva controls for debugging
-  const { initialTransitionProgress } = useControls({
-    initialTransitionProgress: { value: 0.5, min: 0, max: 1, step: 0.01 },
-  });
+  // One-time GL setup — never call setPixelRatio or autoClear inside useFrame
+  useEffect(() => {
+    gl.autoClear = false;
+    gl.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+  }, [gl]);
+
+  const { active, progress } = useProgress();
+  const transitionValue = useRef(0);
+  const revealStarted = useRef(false);
+
+  // Start the iris reveal after the loading screen's 0.9s exit animation finishes
+  useEffect(() => {
+    if (!active && progress === 100) {
+      // loading screen: 1.5s exit + 500ms showing 100% = 2000ms + 100ms buffer
+      const timer = setTimeout(() => {
+        revealStarted.current = true;
+      }, 2100);
+      return () => clearTimeout(timer);
+    }
+  }, [active, progress]);
 
   const sceneOne = useMemo(() => new THREE.Scene(), [])
 
@@ -35,19 +50,22 @@ const PortalSetup = () => {
     uTime: new THREE.Uniform(0.0),
     uResolution: new THREE.Uniform(new THREE.Vector2()),
     uSceneOneTexture: new THREE.Uniform(null),
-    uInitialTransition: new THREE.Uniform(initialTransitionProgress),
+    uInitialTransition: new THREE.Uniform(0.0),
   }), []);
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const { clock, gl } = state;
     mesh.current.material.uniforms.uTime.value = clock.getElapsedTime();
-    mesh.current.material.uniforms.uResolution.value = new THREE.Vector2(
+    // Reuse the existing Vector2 — avoid heap allocation every frame
+    mesh.current.material.uniforms.uResolution.value.set(
       window.innerWidth,
       window.innerHeight
     );
-    mesh.current.material.uniforms.uInitialTransition.value = initialTransitionProgress;
-
-    gl.setPixelRatio(1); // Ensure consistent pixel ratio for render targets
+    // Animate iris reveal after loading screen exits (~4s duration at speed 0.25)
+    if (revealStarted.current && transitionValue.current < 1) {
+      transitionValue.current = Math.min(transitionValue.current + delta * 0.25, 1);
+      mesh.current.material.uniforms.uInitialTransition.value = transitionValue.current;
+    }
 
     // Render the first scene to its render target
     gl.setRenderTarget(renderTargetOne);
@@ -71,10 +89,11 @@ const PortalSetup = () => {
         />
       </mesh>
 
-      <Camera ref={cameraRef} />
+      
   
       {createPortal(
         <>
+         <Camera ref={cameraRef} />
          <Environments />
          <Rubic />
          <Floor />

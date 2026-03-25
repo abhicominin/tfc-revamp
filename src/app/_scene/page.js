@@ -5,11 +5,13 @@ import { Canvas } from "@react-three/fiber"
 
 import { Perf } from "r3f-perf"
 import Main from "./Portal/main"
+import LoadingScreen from "../_interface/LoadingScreen"
 
 
 export default function Scene() {
     return(
         <>
+         <LoadingScreen />
          <main className="w-full h-full fixed top-0 left-0 pointer-events-auto">
            <Canvas shadows
               gl={
