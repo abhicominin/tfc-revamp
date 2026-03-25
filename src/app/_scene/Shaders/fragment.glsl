@@ -8,7 +8,7 @@ uniform float uInitialTransition;
 
 void main() {
     // Noise texture sampled directly at plane UVs
-    float noise = (texture2D(uNoiseTexture, vUv).r - 0.5) * 0.18;
+    float noise = (texture2D(uNoiseTexture, vUv).r - 0.5) * 0.3;
 
     // Simple fade-in: uInitialTransition 0→1, noise roughens the edge during transition
     float alpha = smoothstep(0.0, 1.0, uInitialTransition + noise);

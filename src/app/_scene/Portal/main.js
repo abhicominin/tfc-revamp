@@ -64,7 +64,7 @@ const PortalSetup = () => {
     );
     // Animate iris reveal after loading screen exits (~4s duration at speed 0.25)
     if (revealStarted.current && transitionValue.current < 1) {
-      transitionValue.current = Math.min(transitionValue.current + delta * 0.25, 1);
+      transitionValue.current = Math.min(transitionValue.current + delta * 0.21, 1);
       mesh.current.material.uniforms.uInitialTransition.value = transitionValue.current;
     }
 
