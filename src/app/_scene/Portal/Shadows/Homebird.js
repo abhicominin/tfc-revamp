@@ -1,0 +1,60 @@
+import { useGLTF, useAnimations } from "@react-three/drei"
+import { useEffect, useState } from "react"
+import { LoopOnce, MathUtils } from "three"
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { ASSETS } from "@/app/asset"
+
+export default function StaticBird(){
+    const { scene: rawScene, animations } = useGLTF(ASSETS.ASSETS.MODELS.BIRD)
+    const [scene] = useState(() => SkeletonUtils.clone(rawScene))
+    const { mixer, actions } = useAnimations(animations, scene)
+
+    useEffect(() => {
+     const anims = [
+         actions["Bird|Bird|idle_A1"],
+         actions["Bird|Bird|idle_A2"]
+     ]
+     
+     const currentAnim = anims[0]
+     let previousAnim = currentAnim
+     
+     if(currentAnim) {
+         const onAnimationEnd = () => {
+             const nextAnim = anims[(anims.indexOf(previousAnim) + 1) % anims.length]
+             if(nextAnim) {
+                 previousAnim.stop()
+                 previousAnim = nextAnim
+                 nextAnim.setLoop(LoopOnce, 0)
+                 nextAnim.clampWhenFinished = true
+                 nextAnim.reset()
+                 nextAnim.play()
+             }
+         }
+         
+         mixer.addEventListener("finished", onAnimationEnd)
+         currentAnim.setLoop(LoopOnce, 0)
+         currentAnim.clampWhenFinished = true
+         currentAnim.play()
+     }
+     
+     scene.traverse((child) => {
+         if(child.isMesh) {
+             child.castShadow = true
+             child.receiveShadow = true
+         }
+     })
+     
+     return () => mixer.stopAllAction()
+    }, [])
+
+    return(
+      <>
+        <primitive
+         position={[0.36, 0.05, -5.0]}
+         rotation={[0, MathUtils.degToRad(80), 0]}
+         scale={0.65}
+         object={scene}
+        />
+      </>
+    )
+}

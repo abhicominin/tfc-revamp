@@ -1,5 +1,5 @@
 import { useFrame, useThree, createPortal } from "@react-three/fiber";
-import { useFBO, useProgress } from "@react-three/drei";
+import { useFBO, useProgress, SoftShadows } from "@react-three/drei";
 import { useRef, Suspense, useMemo, useEffect } from "react";
 import * as THREE from "three";
 
@@ -19,7 +19,7 @@ const PortalSetup = () => {
   // One-time GL setup — never call setPixelRatio or autoClear inside useFrame
   useEffect(() => {
     gl.autoClear = false;
-    gl.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    gl.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
   }, [gl]);
 
   const { active, progress } = useProgress();
@@ -32,7 +32,7 @@ const PortalSetup = () => {
       // loading screen: 1.5s exit + 500ms showing 100% = 2000ms + 100ms buffer
       const timer = setTimeout(() => {
         revealStarted.current = true;
-      }, 2100);
+      }, 4000);
       return () => clearTimeout(timer);
     }
   }, [active, progress]);
@@ -43,7 +43,6 @@ const PortalSetup = () => {
       samples: 1,
       width: window.innerWidth,
       height: window.innerHeight,
-      colorSpace: THREE.SRGBColorSpace,
   })
 
   const uniforms = useMemo(() => ({
@@ -52,6 +51,14 @@ const PortalSetup = () => {
     uSceneOneTexture: new THREE.Uniform(null),
     uInitialTransition: new THREE.Uniform(0.0),
     uNoiseTexture: new THREE.Uniform(null),
+    uChromaticAberration: new THREE.Uniform(0.0),
+    uGrayScale: new THREE.Uniform(0.0),
+    uBrighness: new THREE.Uniform(1.0),
+    uContrast: new THREE.Uniform(1.0),
+    uSaturation: new THREE.Uniform(1.0),
+    uVignetteSize: new THREE.Uniform(new THREE.Vector2(0.43, 0.43)),
+    uVignetteRoundness: new THREE.Uniform(0.77),
+    uVignetteSmoothness: new THREE.Uniform(0.31),
   }), []);
 
   useFrame((state, delta) => {
@@ -99,7 +106,8 @@ const PortalSetup = () => {
          <Environments />
          <Rubic />
          <Floor />
-         <color attach="background" args={["#ffffff"]} />
+         <SoftShadows size={35} samples={10} focus={0.9}/>
+         <color attach="background" args={["#000000"]} />
         </>
          ,
          sceneOne,

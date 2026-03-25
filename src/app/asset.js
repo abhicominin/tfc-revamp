@@ -1,7 +1,7 @@
 export const ASSETS = {
     ASSETS : {
         MODELS: {
-            BIRD: '/Models/Bird.glb',
+            BIRD: '/Models/Bird-v2.glb',
         },
         TEXTURES: {
             ENV: "/Images/Env/venice_sunset_1k.hdr",

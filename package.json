@@ -12,7 +12,9 @@
     "@react-spring/three": "^10.0.3",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
+    "cannon-es": "^0.20.0",
     "framer-motion": "^12.38.0",
+    "glsl-vignette": "^1.1.0",
     "glslify-loader": "^2.0.0",
     "leva": "^0.10.1",
     "next": "16.2.1",
@@ -20,14 +22,17 @@
     "raw-loader": "^4.0.2",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "simplex-noise": "^4.0.3",
     "three": "^0.181.0",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "babel-plugin-glsl": "^1.0.0",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "glslify": "^7.1.1",
     "tailwindcss": "^4"
   }
 }

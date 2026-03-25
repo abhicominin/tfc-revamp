@@ -4,14 +4,23 @@ import { useRef, useEffect } from "react"
 import { MathUtils } from "three"
 import { ASSETS } from "@/app/asset"
 
+import Curtain from "../Shadows/Homecurtain"
+import Plant from "../Shadows/Homebranch"
+import StaticBird from "../Shadows/Homebird"
+
 export default function Environments()
 {
     const spotLightRef = useRef()
+    const shadowGroupRef = useRef()
 
     useEffect(() => {
       // Get world position of the spotlight
       const worldPosition = new Vector3()
       spotLightRef.current.getWorldPosition(worldPosition)
+
+      spotLightRef.current.getWorldPosition(shadowGroupRef.current.position)
+      shadowGroupRef.current.position.multiplyScalar(0.3)
+      shadowGroupRef.current.lookAt(0, 0, 0)
     }, [])
 
     return(
@@ -22,6 +31,12 @@ export default function Environments()
          />
 
          <ambientLight intensity={0.4} color="#bdedff"/>
+
+         <group ref={shadowGroupRef}>
+            <Curtain/>
+            <Plant/>
+            <StaticBird/>
+         </group>
 
          <SpotLight
            ref={spotLightRef}
