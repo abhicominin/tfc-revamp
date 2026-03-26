@@ -53,8 +53,8 @@ const PortalSetup = () => {
     uNoiseTexture: new THREE.Uniform(null),
     uChromaticAberration: new THREE.Uniform(0.0),
     uGrayScale: new THREE.Uniform(0.0),
-    uBrighness: new THREE.Uniform(1.0),
-    uContrast: new THREE.Uniform(1.0),
+    uBrighness: new THREE.Uniform(0.9),
+    uContrast: new THREE.Uniform(1.05),
     uSaturation: new THREE.Uniform(1.0),
     uVignetteSize: new THREE.Uniform(new THREE.Vector2(0.43, 0.43)),
     uVignetteRoundness: new THREE.Uniform(0.77),
@@ -106,7 +106,7 @@ const PortalSetup = () => {
          <Environments />
          <Rubic />
          <Floor />
-         <SoftShadows size={35} samples={10} focus={0.9}/>
+         <SoftShadows size={100} samples={10} focus={0.2}/>
          <color attach="background" args={["#000000"]} />
         </>
          ,

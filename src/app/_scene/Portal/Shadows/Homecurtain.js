@@ -1,121 +1,68 @@
-import { ShadowAlpha } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from 'three'
-import * as CANNON from "cannon-es";
-import { useEffect, useMemo, useRef } from "react";
-import { createNoise3D } from "simplex-noise";
+import { useMemo, useRef } from "react";
 
 export default function Curtain(){
+  const clothSize = 4
   const nX = 16
   const nY = 16
-  const mass = 1
-  const clothSize = 4
-  const dist = clothSize / nX  
 
-  const geometryRef = useRef()
-  const particles = useRef()
+  const uTime = useRef({ value: 0 })
 
-  const world = useMemo(() =>
-  {
-    return new CANNON.World({
-        gravity: new CANNON.Vec3(0, -9.81, 0)
+  const [material, depthMaterial] = useMemo(() => {
+    const mat = new THREE.MeshBasicMaterial({
+      opacity: 0.00001,
+      transparent: true,
+      side: THREE.DoubleSide,
     })
-  
-  },[])
 
-  const noise = useMemo(() => createNoise3D(), []);
+    const depth = new THREE.MeshDepthMaterial({
+      depthPacking: THREE.RGBADepthPacking,
+      side: THREE.DoubleSide,
+    })
 
-  function connect(i1, j1, i2, j2){
-    world.addConstraint(
-        new CANNON.DistanceConstraint(
-            particles.current[i1][j1],
-            particles.current[i2][j2],
-            dist
-        )
-    )
-  }
+    depth.onBeforeCompile = (shader) => {
+      shader.uniforms.uTime = uTime.current
+      shader.uniforms.uShadowOpacity = { value: 0.55 }
 
-  function updateParticles(){
-    for( let i = 0; i < nX + 1; i++ )
-        for( let j = 0; j < nY + 1; j++ )
-        {
-            const index = j * (nX + 1) + i;
+      // --- vertex: displacement ---
+      shader.vertexShader = `uniform float uTime;\n` + shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+        float factor = 1.0 - uv.y;
+        float wave = sin(uTime * 0.5 + position.x * 2.0) * sin(uTime * 0.7 + position.y * 1.5);
+        transformed.z += wave * factor * 0.5;
+        transformed.x += wave * factor * 0.02;`
+      )
 
-            const positionAttribute = geometryRef.current.attributes.position
-            const position = particles.current[i][nY - j].position
-            positionAttribute.setXYZ(index, position.x, position.y, position.z)
-            positionAttribute.needsUpdate = true
-
+      // --- fragment: bayer-dithered opacity (replicates ShadowAlpha) ---
+      shader.fragmentShader = shader.fragmentShader.replace(
+        'void main() {',
+        `uniform float uShadowOpacity;
+        float bayerDither2x2(vec2 v){ return mod(3.0*v.y + 2.0*v.x, 4.0); }
+        float bayerDither4x4(vec2 v){
+          vec2 P1 = mod(v, 2.0);
+          vec2 P2 = mod(floor(0.5*v), 2.0);
+          return 4.0*bayerDither2x2(P1) + bayerDither2x2(P2);
         }
-  }
-
-  function applyWind(time) {
-      for (let i = 0; i < nX + 1; i++) {
-        for (let j = 0; j < nY + 1; j++) {
-          const particle = particles.current[i][j];
-          const wind = noise(
-            (time + particle.position.x) * 1,
-            (time + particle.position.y) * 1,
-            (time + particle.position.z) * 1
-          );
-          particle.applyForce(
-            new CANNON.Vec3(wind * 0.04, 0, 0),
-            particle.position
-          );
-        }
-      }
-  }
-
-  useEffect(() =>
-  {
-    const shape = new CANNON.Particle()
-    particles.current = []
-
-    for( let x = 0; x < nX + 1; x++ )
-    {
-        particles.current.push([])
-        for( let y = 0; y < nY + 1; y++ )
-        {
-            const particle = new CANNON.Body({
-                mass: y === nY ? 0 : mass,
-                shape,
-                position: new CANNON.Vec3(
-                  (x - nX * 0.5) * dist,
-                  (y - nY * 0.5) * dist,
-                  0
-                ),
-                velocity: new CANNON.Vec3(0, 0, -0.09 * (nY - y)),
-            })
-
-            particles.current[x].push(particle);
-            world.addBody(particle);
-        }
+        void main() {
+          if(bayerDither4x4(floor(mod(gl_FragCoord.xy, 4.0))) / 16.0 >= uShadowOpacity) discard;`
+      )
     }
 
-    for (let i = 0; i < nX + 1; i++) {
-      for (let j = 0; j < nY + 1; j++) {
-        // if (i < nX) connect(i, j, i + 1, j);
-        if (j < nY) connect(i, j, i, j + 1);
-      }
-    }
-  
+    return [mat, depth]
   }, [])
 
-  const timeStep = 1 / 60;
   useFrame(({ clock }) => {
-    applyWind(clock.elapsedTime);
-    updateParticles();
-    world.step(timeStep);
-  });
+    uTime.current.value = clock.elapsedTime
+  })
 
-  
   return(
       <>
-      <mesh castShadow position={[-2.5, 1.2, 0]} scale-y={2}>
-      <planeGeometry ref={geometryRef} args={[clothSize, clothSize, nX, nY]} />
-      <meshBasicMaterial opacity={0.00001} transparent side={THREE.DoubleSide}/>
-      <ShadowAlpha opacity={0.7} />
-    </mesh>
+      <mesh castShadow customDepthMaterial={depthMaterial} position={[-2.44, 1.2, 0]} scale-y={2}>
+        <planeGeometry args={[clothSize, clothSize, nX, nY]} />
+        <primitive object={material} attach="material" />
+      </mesh>
       </>
   )
 }

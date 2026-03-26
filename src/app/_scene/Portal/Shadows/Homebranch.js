@@ -1,128 +1,101 @@
-import { ShadowAlpha, useTexture } from "@react-three/drei";
 import * as THREE from 'three'
-import { ASSETS } from "@/app/asset";
+import { useTexture } from "@react-three/drei"
+import { useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import { useFrame } from "@react-three/fiber";
-import * as CANNON from "cannon-es";
-import { useEffect, useMemo, useRef } from "react";
-import { createNoise3D } from "simplex-noise";
+import { ASSETS } from '@/app/asset'
 
-export default function Plant(){
-  const nX = 16
-  const nY = 16
-  const mass = 1
-  const clothSize = 4
-  const dist = clothSize / nX  
+// Displacement chunks shared between the visible material and the depth (shadow) material
+// so they always move in lockstep and the shadow never detaches from the mesh.
+const VERT_UNIFORMS = `
+  #include <common>
+  uniform float uTime;
+`;
 
-  const geometryRef = useRef()
-  const particles = useRef()
+const VERT_DISPLACEMENT = `
+  #include <begin_vertex>
+
+  float strength = smoothstep(0.9, 0.7, uv.y);
+  transformed.x += sin(uTime * 0.4 + position.y * 0.6) * 0.004 * strength;
+  transformed.z += sin(uTime * 0.3 + position.x * 0.5) * 0.2 * strength;
+`;
+
+export default function Plant() {
   const map = useTexture(ASSETS.ASSETS.TEXTURES.BRANCH);
 
-  useEffect(() => {
-   map.wrapS =map.wrapT = THREE.RepeatWrapping;
-   map.needsUpdate = true;
-  }, []);
+  useLayoutEffect(() => {
+    map.wrapS = map.wrapT = THREE.RepeatWrapping;
+    map.needsUpdate = true;
+  }, [map]);
 
-  const world = useMemo(() =>
-  {
-    return new CANNON.World({
-        gravity: new CANNON.Vec3(0, -9.81, 0)
-    })
-  
-  },[])
+  const uniforms = useMemo(() => ({ uTime: { value: 0 } }), []);
+  const meshRef = useRef();
 
-  const noise = useMemo(() => createNoise3D(), []);
-
-  function connect(i1, j1, i2, j2){
-    world.addConstraint(
-        new CANNON.DistanceConstraint(
-            particles.current[i1][j1],
-            particles.current[i2][j2],
-            dist
-        )
-    )
-  }
-
-  function updateParticles(){
-    for( let i = 0; i < nX + 1; i++ )
-        for( let j = 0; j < nY + 1; j++ )
-        {
-            const index = j * (nX + 1) + i;
-
-            const positionAttribute = geometryRef.current.attributes.position
-            const position = particles.current[i][nY - j].position
-            positionAttribute.setXYZ(index, position.x, position.y, position.z)
-            positionAttribute.needsUpdate = true
-
-        }
-  }
-
-  function applyWind(time) {
-      for (let i = 0; i < nX + 1; i++) {
-        for (let j = 0; j < nY + 1; j++) {
-          const particle = particles.current[i][j];
-          const wind = noise(
-            (time + particle.position.x) * 0,
-            (time + particle.position.y) * 0,
-            (time + particle.position.z) * 0
-          );
-          particle.applyForce(
-            new CANNON.Vec3(wind * 0.03, 0, 0),
-            particle.position
-          );
-        }
-      }
-  }
-
-  useEffect(() =>
-  {
-    const shape = new CANNON.Particle()
-    particles.current = []
-
-    for( let x = 0; x < nX + 1; x++ )
-    {
-        particles.current.push([])
-        for( let y = 0; y < nY + 1; y++ )
-        {
-            const particle = new CANNON.Body({
-                mass: y === nY ? 0 : mass,
-                shape,
-                position: new CANNON.Vec3(
-                  (x - nX * 0.5) * dist,
-                  (y - nY * 0.5) * dist,
-                  0
-                ),
-                velocity: new CANNON.Vec3(0, 0, -0.031 * (nY - y)),
-            })
-
-            particles.current[x].push(particle);
-            world.addBody(particle);
-        }
-    }
-
-    for (let i = 0; i < nX + 1; i++) {
-      for (let j = 0; j < nY + 1; j++) {
-        // if (i < nX) connect(i, j, i + 1, j);
-        if (j < nY) connect(i, j, i, j + 1);
-      }
-    }
-  
-  }, [])
-
-  const timeStep = 1 / 60;
   useFrame(({ clock }) => {
-    applyWind(clock.elapsedTime);
-    updateParticles();
-    world.step(timeStep);
+    uniforms.uTime.value = clock.elapsedTime;
   });
 
-  
-  return(
-      <>
-       <mesh castShadow position={[0.27, 0.55, 0]} scale={0.55} rotation-z={THREE.MathUtils.degToRad(-75)}>
-        <planeGeometry ref={geometryRef} args={[clothSize, clothSize, nX, nY]} />
-        <meshBasicMaterial opacity={0.1} transparent />
-        <ShadowAlpha opacity={0.87} alphaMap={map}/>
-       </mesh>
-      </>
-  )
+  // Visible material — just needs to show the alpha-clipped silhouette
+  const onBeforeCompile = useCallback((shader) => {
+    shader.uniforms.uTime = uniforms.uTime;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>',      VERT_UNIFORMS)
+      .replace('#include <begin_vertex>', VERT_DISPLACEMENT);
+  }, [uniforms]);
+
+  // Depth (shadow) material — must replicate the exact same displacement
+  const customDepthMaterial = useMemo(() => {
+    const mat = new THREE.MeshDepthMaterial({
+      depthPacking: THREE.RGBADepthPacking,
+      alphaTest: 0.6,
+      alphaMap: map,
+    });
+    mat.onBeforeCompile = (shader) => {
+      shader.uniforms.uTime = uniforms.uTime;
+      shader.uniforms.uShadowOpacity = { value: 0.65 };
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>',      VERT_UNIFORMS)
+        .replace('#include <begin_vertex>', VERT_DISPLACEMENT);
+      // Bayer 4x4 ordered dither — discard N% of shadow pixels to make shadow lighter.
+      // Only affects this mesh's shadow. Shape unchanged. Tune threshold: 0=full, 1=none.
+      shader.fragmentShader = shader.fragmentShader
+        .replace('void main() {', `
+          uniform float uShadowOpacity;
+          float _b2(vec2 v) { return mod(3.0*v.y + 2.0*v.x, 4.0); }
+          float _b4(vec2 v) {
+            vec2 p1 = mod(v, 2.0); vec2 p2 = mod(floor(0.5*v), 2.0);
+            return (4.0*_b2(p1) + _b2(p2)) / 16.0;
+          }
+          void main() {`)
+        .replace('#include <alphatest_fragment>', `
+          #include <alphatest_fragment>
+          if (_b4(floor(mod(gl_FragCoord.xy, 4.0))) >= uShadowOpacity) discard;
+        `);
+    };
+    return mat;
+  }, [map, uniforms]);
+
+  useLayoutEffect(() => {
+    if (meshRef.current) meshRef.current.customDepthMaterial = customDepthMaterial;
+  }, [customDepthMaterial]);
+
+  return (
+    <>
+      <mesh
+        ref={meshRef}
+        castShadow
+        position={[0.32, 0.58, 0]}
+        scale={1.9}
+        rotation-z={THREE.MathUtils.degToRad(-75)}
+      >
+        <planeGeometry args={[1, 1]} />
+        <meshStandardMaterial
+          onBeforeCompile={onBeforeCompile}
+          alphaMap={map}
+          alphaTest={0.5}
+          side={THREE.DoubleSide}
+          transparent={false}
+        />
+      </mesh>
+    </>
+  );
 }

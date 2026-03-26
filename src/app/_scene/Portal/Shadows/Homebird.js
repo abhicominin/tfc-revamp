@@ -50,9 +50,9 @@ export default function StaticBird(){
     return(
       <>
         <primitive
-         position={[0.36, 0.05, -5.0]}
+         position={[0.38, 0.105, -5.0]}
          rotation={[0, MathUtils.degToRad(80), 0]}
-         scale={0.65}
+         scale={0.55}
          object={scene}
         />
       </>
