@@ -23,7 +23,7 @@ export default function Curtain(){
 
     depth.onBeforeCompile = (shader) => {
       shader.uniforms.uTime = uTime.current
-      shader.uniforms.uShadowOpacity = { value: 0.55 }
+      shader.uniforms.uShadowOpacity = { value: 0.50 }
 
       // --- vertex: displacement ---
       shader.vertexShader = `uniform float uTime;\n` + shader.vertexShader.replace(

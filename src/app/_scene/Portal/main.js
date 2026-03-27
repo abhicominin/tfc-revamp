@@ -1,5 +1,5 @@
 import { useFrame, useThree, createPortal } from "@react-three/fiber";
-import { useFBO, useProgress } from "@react-three/drei";
+import { useFBO, useProgress, SoftShadows } from "@react-three/drei";
 import { useRef, Suspense, useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { useControls } from "leva";
@@ -140,7 +140,7 @@ const PortalSetup = () => {
          <Rubic />
          <Floor />
          <FloorMenu />
-         {/* <SoftShadows samples={10} size={35} focus={0.8}/> */}
+         <SoftShadows samples={10} size={25} focus={0.8}/>
          <color attach="background" args={[bgColor]} />
         </>
          ,
