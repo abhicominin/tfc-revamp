@@ -10,6 +10,8 @@ export default function StaticBird(){
     const { mixer, actions } = useAnimations(animations, scene)
 
     useEffect(() => {
+     if (!mixer || !actions) return
+
      const anims = [
          actions["Bird|Bird|idle_A1"],
          actions["Bird|Bird|idle_A2"]
@@ -17,9 +19,10 @@ export default function StaticBird(){
      
      const currentAnim = anims[0]
      let previousAnim = currentAnim
+     let onAnimationEnd
      
      if(currentAnim) {
-         const onAnimationEnd = () => {
+         onAnimationEnd = () => {
              const nextAnim = anims[(anims.indexOf(previousAnim) + 1) % anims.length]
              if(nextAnim) {
                  previousAnim.stop()
@@ -43,8 +46,13 @@ export default function StaticBird(){
          }
      })
      
-     return () => mixer.stopAllAction()
-    }, [])
+     return () => {
+         if (onAnimationEnd) {
+             mixer.removeEventListener("finished", onAnimationEnd)
+         }
+         mixer.stopAllAction()
+     }
+    }, [actions, mixer, scene])
 
     return(
       <>

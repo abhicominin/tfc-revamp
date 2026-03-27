@@ -28,4 +28,6 @@ const PerspectiveCameraComponent = forwardRef(( props, ref ) => {
   );
 });
 
+PerspectiveCameraComponent.displayName = 'PerspectiveCameraComponent';
+
 export default PerspectiveCameraComponent;

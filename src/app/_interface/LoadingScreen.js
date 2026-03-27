@@ -1,7 +1,7 @@
 'use client'
 import { useProgress } from '@react-three/drei'
 import { AnimatePresence, motion, useMotionValue, animate, useTransform, useMotionValueEvent } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import useGlobalStore from '../globalstore'
 
@@ -10,6 +10,7 @@ export default function LoadingScreen() {
   const setLoading = useGlobalStore(s => s.setLoading)
   const [canExit, setCanExit] = useState(false)
   const [ready, setReady] = useState(false)
+  const readyTimerRef = useRef(null)
   const motionProgress = useMotionValue(0)
   const barWidth = useTransform(motionProgress, v => `${v}%`)
   const [displayPct, setDisplayPct] = useState(0)
@@ -22,12 +23,16 @@ export default function LoadingScreen() {
       ease: 'easeOut',
       onComplete: () => {
         if (!active && progress === 100) {
-          setTimeout(() => setReady(true), 500)
+          clearTimeout(readyTimerRef.current)
+          readyTimerRef.current = setTimeout(() => setReady(true), 500)
         }
       },
     })
-    return controls.stop
-  }, [progress, active])
+    return () => {
+      controls.stop()
+      clearTimeout(readyTimerRef.current)
+    }
+  }, [progress, active, motionProgress])
 
   const enter = () => {
     // Dispatch synchronously — audio.play() inside the handler

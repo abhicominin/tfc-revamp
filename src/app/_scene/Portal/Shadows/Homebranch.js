@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { useTexture } from "@react-three/drei"
-import { useLayoutEffect, useMemo, useCallback, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import { useFrame } from "@react-three/fiber";
 import { ASSETS } from '@/app/asset'
 
@@ -20,27 +20,41 @@ const VERT_DISPLACEMENT = `
 `;
 
 export default function Plant() {
-  const map = useTexture(ASSETS.ASSETS.TEXTURES.BRANCH);
+  const sourceMap = useTexture(ASSETS.ASSETS.TEXTURES.BRANCH);
 
-  useLayoutEffect(() => {
-    map.wrapS = map.wrapT = THREE.RepeatWrapping;
-    map.needsUpdate = true;
+  const map = useMemo(() => {
+    const tex = sourceMap.clone();
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.needsUpdate = true;
+    return tex;
+  }, [sourceMap]);
+
+  useEffect(() => {
+    return () => map.dispose();
   }, [map]);
 
-  const uniforms = useMemo(() => ({ uTime: { value: 0 } }), []);
+  const visibleShaderRef = useRef(null);
+  const depthShaderRef = useRef(null);
   const meshRef = useRef();
 
   useFrame(({ clock }) => {
-    uniforms.uTime.value = clock.elapsedTime;
+    const t = clock.elapsedTime;
+    if (visibleShaderRef.current) {
+      visibleShaderRef.current.uniforms.uTime.value = t;
+    }
+    if (depthShaderRef.current) {
+      depthShaderRef.current.uniforms.uTime.value = t;
+    }
   });
 
   // Visible material — just needs to show the alpha-clipped silhouette
   const onBeforeCompile = useCallback((shader) => {
-    shader.uniforms.uTime = uniforms.uTime;
+    shader.uniforms.uTime = { value: 0 };
+    visibleShaderRef.current = shader;
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>',      VERT_UNIFORMS)
       .replace('#include <begin_vertex>', VERT_DISPLACEMENT);
-  }, [uniforms]);
+  }, []);
 
   // Depth (shadow) material — must replicate the exact same displacement
   const customDepthMaterial = useMemo(() => {
@@ -50,7 +64,8 @@ export default function Plant() {
       alphaMap: map,
     });
     mat.onBeforeCompile = (shader) => {
-      shader.uniforms.uTime = uniforms.uTime;
+      shader.uniforms.uTime = { value: 0 };
+      depthShaderRef.current = shader;
       shader.uniforms.uShadowOpacity = { value: 0.65 };
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>',      VERT_UNIFORMS)
@@ -72,10 +87,19 @@ export default function Plant() {
         `);
     };
     return mat;
-  }, [map, uniforms]);
+  }, [map]);
 
   useLayoutEffect(() => {
-    if (meshRef.current) meshRef.current.customDepthMaterial = customDepthMaterial;
+    const mesh = meshRef.current;
+    if (!mesh) return;
+    mesh.customDepthMaterial = customDepthMaterial;
+
+    return () => {
+      mesh.customDepthMaterial = null;
+      customDepthMaterial.dispose();
+      depthShaderRef.current = null;
+      visibleShaderRef.current = null;
+    };
   }, [customDepthMaterial]);
 
   return (

@@ -1,29 +1,38 @@
 import * as THREE from 'three'
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useTexture } from "@react-three/drei";
 import { ASSETS } from '@/app/asset';
 
 export default function Floor()
 {
-    const maps = useTexture({
+    const sourceMaps = useTexture({
         map: ASSETS.ASSETS.TEXTURES.GROUND_DIFFUSE,
         normalMap: ASSETS.ASSETS.TEXTURES.GROUND_NORMAL,
         aoMap: ASSETS.ASSETS.TEXTURES.GROUND_AO,
         roughnessMap: ASSETS.ASSETS.TEXTURES.GROUND_ROUGH,
     });
 
-    useEffect(() => {
-        for (const map in maps) {
-          const tex = maps[map]
-          if(map === 'map'){
-            maps[map].colorSpace = THREE.SRGBColorSpace
+    const maps = useMemo(() => {
+        const prepared = {};
+        for (const [key, texture] of Object.entries(sourceMaps)) {
+          const tex = texture.clone();
+          if (key === 'map') {
+            tex.colorSpace = THREE.SRGBColorSpace;
           }
           tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
           tex.anisotropy = 16;
           tex.repeat.set(170, 170);
           tex.needsUpdate = true;
+          prepared[key] = tex;
         }
-      }, []);
+        return prepared;
+    }, [sourceMaps]);
+
+    useEffect(() => {
+      return () => {
+        Object.values(maps).forEach((tex) => tex.dispose());
+      };
+    }, [maps]);
 
 
     return(

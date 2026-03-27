@@ -13,14 +13,19 @@ export default function Scene() {
         <>
          <LoadingScreen />
          <main className="w-full h-full fixed top-0 left-0 pointer-events-auto">
-           <Canvas shadows
+           <Canvas
+              shadows
+              dpr={[0.5, 1]}
               gl={
                 {
                     antialias: false,
-                    dpr: [1],
                     outputColorSpace: SRGBColorSpace,
                 }
               }
+              onCreated={({ gl }) => {
+                gl.autoClear = false;
+                gl.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
+              }}
            >
                 <Preload all />
                 <Main />

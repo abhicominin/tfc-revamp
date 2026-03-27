@@ -1,5 +1,5 @@
 import { useFrame, useThree, createPortal } from "@react-three/fiber";
-import { SoftShadows, useFBO, useProgress, SoftShadow } from "@react-three/drei";
+import { useFBO, useProgress } from "@react-three/drei";
 import { useRef, Suspense, useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { useControls } from "leva";
@@ -14,16 +14,14 @@ import Rubic from "./Objects/Rubic";
 import Floor from "./Objects/Floor";
 import FloorMenu from "./Objects/Floormenu";
 
+import useSceneStore from "../scenestore";
+
 const PortalSetup = () => {
   const mesh = useRef();
   const cameraRef = useRef();
-  const { viewport, gl } = useThree();
+  const { viewport, size } = useThree();
 
-  // One-time GL setup — never call setPixelRatio or autoClear inside useFrame
-  useEffect(() => {
-    gl.autoClear = false;
-    gl.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
-  }, [gl]);
+  const groupHovered = useSceneStore((state) => state.groupHovered);
 
   const { active, progress } = useProgress();
   const transitionValue = useRef(0);
@@ -52,11 +50,11 @@ const PortalSetup = () => {
 
   const sceneOne = useMemo(() => new THREE.Scene(), [])
 
-  const renderTargetOne = useFBO({
-      samples: 1,
-      width: window.innerWidth,
-      height: window.innerHeight,
-  })
+    const renderTargetOne = useFBO({
+      samples: 2,
+      width: size.width,
+      height: size.height,
+    })
 
   const uniforms = useMemo(() => ({
     uTime: new THREE.Uniform(0.0),
@@ -75,18 +73,38 @@ const PortalSetup = () => {
   }), []);
 
   useFrame((state, delta) => {
+    if (!mesh.current || !cameraRef.current) return;
+
     const { clock, gl } = state;
     mesh.current.material.uniforms.uTime.value = clock.getElapsedTime();
     // Reuse the existing Vector2 — avoid heap allocation every frame
     mesh.current.material.uniforms.uResolution.value.set(
-      window.innerWidth,
-      window.innerHeight
+      size.width,
+      size.height
     );
     // Animate iris reveal after loading screen exits (~4s duration at speed 0.25)
     if (revealStarted.current && transitionValue.current < 1) {
       transitionValue.current = Math.min(transitionValue.current + delta * 0.21, 1);
       mesh.current.material.uniforms.uInitialTransition.value = transitionValue.current;
     }
+
+    // Animate effect when hovering over menu text
+    mesh.current.material.uniforms.uChromaticAberration.value = THREE.MathUtils.lerp(
+      mesh.current.material.uniforms.uChromaticAberration.value,
+      groupHovered ? 0.3 : 0.0,
+      0.1
+    );
+    mesh.current.material.uniforms.uContrast.value = THREE.MathUtils.lerp(
+      mesh.current.material.uniforms.uContrast.value,
+      groupHovered ? 1.1 : 1.05,
+      0.1
+    );
+    mesh.current.material.uniforms.uBrighness.value = THREE.MathUtils.lerp(
+      mesh.current.material.uniforms.uBrighness.value,
+      groupHovered ? 0.85 : 0.9,
+      0.1
+    );
+
 
     // Render the first scene to its render target
     gl.setRenderTarget(renderTargetOne);
@@ -127,7 +145,14 @@ const PortalSetup = () => {
         </>
          ,
          sceneOne,
-         { events: { compute: (_, s, p) => { s.pointer.copy(p.pointer); s.raycaster.setFromCamera(s.pointer, cameraRef.current) } } }
+         {
+           events: {
+             compute: (_, s, p) => {
+               s.pointer.copy(p.pointer);
+               s.raycaster.setFromCamera(s.pointer, s.camera);
+             }
+           }
+         }
       )}
     </>
   );

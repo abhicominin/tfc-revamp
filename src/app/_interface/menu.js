@@ -1,6 +1,6 @@
 'use client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -16,11 +16,8 @@ export default function Menu() {
     const [buttonHovered, setButtonHovered] = useState(false);
     const pathname = usePathname();
 
-    useEffect(() => {
-        setButtonHovered(false);
-    }, [pathname]);
 
-    return (
+    return(
         <>
           <AnimatePresence mode='wait'>
           {pathname !== '/' && (

@@ -37,12 +37,12 @@ const Rubic = forwardRef(function Rubic({ children }, ref) {
       meshPhysicalMaterial: false,
       transmissionSampler: true,
       backside: false,
-      samples: 2,
+      samples: 10,
       resolution: 512,
       transmission: 0.97,
       roughness: 0.0,
       thickness: 2.66,
-      ior: 1.01,
+      ior: 1.02,
       chromaticAberration: 0.01,
       anisotropy: 1.0,
       distortion: 0.0,
@@ -64,7 +64,7 @@ const Rubic = forwardRef(function Rubic({ children }, ref) {
             mesh.setMatrixAt(index, temp.matrix);
         });
         mesh.instanceMatrix.needsUpdate = true;
-    }, [positionsData]);
+    }, [positionsData, instancedMeshRef]);
 
     return(
         <>

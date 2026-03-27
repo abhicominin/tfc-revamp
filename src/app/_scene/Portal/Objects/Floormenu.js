@@ -1,7 +1,17 @@
 import { Text } from "@react-three/drei"
+import { useRouter, usePathname } from "next/navigation"
 import { useRef } from "react"
 import { useFrame } from "@react-three/fiber"
 import { Color } from "three"
+
+import useSceneStore from "../../scenestore"
+
+const links = [
+    { label: "ABOUT", href: "/About", name: "About" },
+    { label: "SERVICES", href: "/Service", name: "Service" },
+    { label: "CONTACTS", href: "/Contacts", name: "Contact" },
+    { label: "PROJECTS", href: "/Project", name: "Project" },
+]
 
 const rubic_config = {
     cube_size: 0.25,
@@ -9,34 +19,83 @@ const rubic_config = {
     cube_radius: 0.01
 } 
 
-const MENU_TEXTS = ['ABOUT', 'SERVICES', 'CONTACTS', 'PROJECTS']
 const DEFAULT_TEXT_COLOR = new Color('black')
 const HOVER_TEXT_COLOR = new Color('red')
+const VISIBLE_OPACITY = 1
+const HIDDEN_OPACITY = 0
+const INTERACTION_OPACITY_THRESHOLD = 0.35
+
+const PATH_VISIBILITY = {
+    '/': 'all',
+    '/Project': 'none',
+    '/Contacts': 'none',
+    '/About': 'none',
+    '/Service': 'only-service',
+}
+
+function getTargetOpacity(pathname, linkHref) {
+    const rule = PATH_VISIBILITY[pathname] ?? 'all'
+
+    if (rule === 'all') return VISIBLE_OPACITY
+    if (rule === 'none') return HIDDEN_OPACITY
+    if (rule === 'only-service') return linkHref === '/Service' ? VISIBLE_OPACITY : HIDDEN_OPACITY
+
+    return VISIBLE_OPACITY
+}
+
+function isInteractive(material) {
+    return material && material.opacity > INTERACTION_OPACITY_THRESHOLD
+}
 
 export default function FloorMenu() {
 
     const groupRef = useRef()
     const materialsRef = useRef([])  
+    const router = useRouter();
+    const pathname = usePathname()
+    const setTextHovered = useSceneStore((state) => state.setTextHovered)
+    const setGroupHovered = useSceneStore((state) => state.setGroupHovered)
+    const setMenutextClicked = useSceneStore((state) => state.setMenutextClicked)
 
     const handlePointerEnter = (event) => {
         const material = event.object.material
+        if (!isInteractive(material)) return
         material.userData.targetColor = HOVER_TEXT_COLOR
+        setTextHovered(true)
     }
 
     const handlePointerLeave = (event) => {
         const material = event.object.material
+        if (!material) return
         material.userData.targetColor = DEFAULT_TEXT_COLOR
+        setTextHovered(false)
+    }
+
+    const handleClick = (event, link) => {
+        const material = event.object.material
+        if (!isInteractive(material)) return
+        router.push(link.href)
+        setMenutextClicked(link.href)
     }
 
     useFrame(() => {
-        materialsRef.current.forEach((material) => {
+        materialsRef.current.forEach((material, index) => {
             if (!material) return
+
+            const link = links[index]
+            if (!link) return
 
             if (!material.userData.targetColor) {
                 material.userData.targetColor = DEFAULT_TEXT_COLOR
             }
+            if (material.userData.targetOpacity == null) {
+                material.userData.targetOpacity = getTargetOpacity(pathname, link.href)
+                material.opacity = material.userData.targetOpacity
+            }
 
+            material.userData.targetOpacity = getTargetOpacity(pathname, link.href)
             material.color.lerp(material.userData.targetColor, 0.12)
+            material.opacity += (material.userData.targetOpacity - material.opacity) * 0.12
         })
     })
 
@@ -46,10 +105,12 @@ export default function FloorMenu() {
             ref={groupRef}
             position={[rubic_config.cube_size * 2.79, 0.01, rubic_config.cube_size * 2.79]}
             rotation-x={-Math.PI / 2}
+            onPointerEnter={() => setGroupHovered(true)}
+            onPointerLeave={() => setGroupHovered(false)}
         >
-            {MENU_TEXTS.map((text, index) => (
+            {links.map((link, index) => (
                 <Text
-                    key={text}
+                    key={link.label}
                     position={[0, index * -0.1, 0]}
                     font='/Fonts/FuturaCyrillicMedium.ttf'
                     fontSize={0.08}
@@ -57,12 +118,14 @@ export default function FloorMenu() {
                     anchorY='top'
                     onPointerEnter={handlePointerEnter}
                     onPointerLeave={handlePointerLeave}
+                    onClick={(event) => handleClick(event, link)}
                 >
-                    {text}
+                    {link.label}
                     <meshBasicMaterial
                         ref={el => materialsRef.current[index] = el}
                         color={'black'}
                         transparent
+                        opacity={1}
                         toneMapped={false}
                     />
                 </Text>
