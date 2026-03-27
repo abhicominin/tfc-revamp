@@ -92,7 +92,7 @@ export default function Environments()
                    box1 = smoothstep(0.0, 0.0, box1);
    
                    float box2 = sdfRect(uv + vec2(-0.1, 0.0), vec2(0.03, 0.8));
-                   box2 = smoothstep(0.0, 0.01, box2);
+                   box2 = smoothstep(0.0, 0.0, box2);
    
                    float box3 = sdfRect(uv + vec2(0.0, -0.0), vec2(1.3, 0.02));
                    box3 = smoothstep(0.0, 0.0, box3);

@@ -80,6 +80,19 @@ const Rubic = forwardRef(function Rubic({ children }, ref) {
             <MeshTransmissionMaterial 
                 {...config}
             />
+            {/* <meshPhysicalMaterial
+                color="#c0c0c0"
+                metalness={0.5}
+                roughness={0.3}
+                clearcoat={1}
+                transmission={0.6}
+                thickness={0.2}
+                ior={1.6}
+                clearcoatRoughness={0.1}
+                envMapIntensity={0}
+                envMap={null}
+                reflectivity={1}
+            /> */}
           </instancedMesh>
          {children}
         </>

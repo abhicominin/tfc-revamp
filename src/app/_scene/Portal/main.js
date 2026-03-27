@@ -1,15 +1,18 @@
 import { useFrame, useThree, createPortal } from "@react-three/fiber";
-import { useFBO, useProgress, SoftShadows } from "@react-three/drei";
+import { SoftShadows, useFBO, useProgress, SoftShadow } from "@react-three/drei";
 import { useRef, Suspense, useMemo, useEffect } from "react";
 import * as THREE from "three";
+import { useControls } from "leva";
 
 import vertexShader from "../Shaders/vertex.glsl";
 import fragmentShader from "../Shaders/fragment.glsl";
 
 import Camera from "./camera";
+import PerspectiveCameraComponent from "./perspectivecamera";
 import Environments from "./Objects/Lights";
 import Rubic from "./Objects/Rubic";
 import Floor from "./Objects/Floor";
+import FloorMenu from "./Objects/Floormenu";
 
 const PortalSetup = () => {
   const mesh = useRef();
@@ -36,6 +39,16 @@ const PortalSetup = () => {
       return () => clearTimeout(timer);
     }
   }, [active, progress]);
+
+  const { fogColor, fogNear, fogFar } = useControls("Fog", {
+    fogColor: "#000000",
+    fogNear: { value: 0.01, min: 0, max: 20, step: 0.01 },
+    fogFar:  { value: 3,    min: 0, max: 50, step: 0.1  },
+  });
+
+  const { bgColor } = useControls("Background", {
+    bgColor: "#000000",
+  });
 
   const sceneOne = useMemo(() => new THREE.Scene(), [])
 
@@ -103,11 +116,14 @@ const PortalSetup = () => {
       {createPortal(
         <>
          <Camera ref={cameraRef} />
+         {/* <PerspectiveCameraComponent ref={cameraRef} /> */}
+         {/* <fog attach="fog" args={[fogColor, fogNear, fogFar]} /> */}
          <Environments />
          <Rubic />
          <Floor />
-         <SoftShadows size={100} samples={10} focus={0.2}/>
-         <color attach="background" args={["#000000"]} />
+         <FloorMenu />
+         {/* <SoftShadows samples={10} size={35} focus={0.8}/> */}
+         <color attach="background" args={[bgColor]} />
         </>
          ,
          sceneOne,
