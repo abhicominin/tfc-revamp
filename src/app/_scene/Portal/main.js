@@ -57,7 +57,7 @@ const PortalSetup = () => {
   });
 
   const { blurProgress, blurMaskWidth, blurMaskHeight, blurMaskRoundness, blurMaskSmoothness, blurMaskStrength } = useControls("Blur", {
-    blurProgress: { value: 2.0, min: 0, max: 1, step: 0.01 },
+    blurProgress: { value: 1.0, min: 0, max: 1, step: 0.01 },
     blurMaskWidth: { value: 0.42, min: 0, max: 1, step: 0.01 },
     blurMaskHeight: { value: 0.37, min: 0, max: 1, step: 0.01 },
     blurMaskRoundness: { value: 1.00, min: 0, max: 1, step: 0.01 },
@@ -109,10 +109,6 @@ const PortalSetup = () => {
       size.width,
       size.height
     );
-    mesh.current.material.uniforms.uBlurProgress.value = blurProgress;
-    mesh.current.material.uniforms.uBlurMaskSize.value.set(blurMaskWidth, blurMaskHeight);
-    mesh.current.material.uniforms.uBlurMaskRoundness.value = blurMaskRoundness;
-    mesh.current.material.uniforms.uBlurMaskSmoothness.value = blurMaskSmoothness;
     mesh.current.material.uniforms.uBlurMaskStrength.value = blurMaskStrength;
     mesh.current.material.uniforms.uBlurNoiseSampleTexture.value = noisetexture;
     // Animate iris reveal after loading screen exits (~4s duration at speed 0.25)
@@ -122,9 +118,26 @@ const PortalSetup = () => {
     }
 
     // Animate effect when hovering over menu text
+    const isService = pathname === "/Service";
+
+    // Lerp blur mask shape — route overrides take precedence over Leva baseline
+    const targetWidth      = isService ? 0.33 : blurMaskWidth;
+    const targetHeight     = isService ? 0.43 : blurMaskHeight;
+    const targetSmoothness = isService ? 0.25 : blurMaskSmoothness;
+    const blurSize = mesh.current.material.uniforms.uBlurMaskSize.value;
+    blurSize.set(
+      THREE.MathUtils.lerp(blurSize.x, targetWidth,  0.1),
+      THREE.MathUtils.lerp(blurSize.y, targetHeight, 0.1)
+    );
+    mesh.current.material.uniforms.uBlurMaskSmoothness.value = THREE.MathUtils.lerp(
+      mesh.current.material.uniforms.uBlurMaskSmoothness.value,
+      targetSmoothness,
+      0.1
+    );
+    mesh.current.material.uniforms.uBlurMaskRoundness.value = blurMaskRoundness;
     mesh.current.material.uniforms.uChromaticAberration.value = THREE.MathUtils.lerp(
       mesh.current.material.uniforms.uChromaticAberration.value,
-      groupHovered ? 0.3 : 0.0,
+      isService ? 0.1 : groupHovered ? 0.3 : 0.0,
       0.1
     );
     mesh.current.material.uniforms.uContrast.value = THREE.MathUtils.lerp(
@@ -137,7 +150,7 @@ const PortalSetup = () => {
       groupHovered ? 0.85 : 0.9,
       0.1
     );
-    const targetBlur = (groupHovered || pathname === "/Contacts") ? 10.0 : blurProgress;
+    const targetBlur = (groupHovered || pathname === "/Contacts") ? 1.5 : isService ? 1.0 : blurProgress;
     mesh.current.material.uniforms.uBlurProgress.value = THREE.MathUtils.lerp(
       mesh.current.material.uniforms.uBlurProgress.value,
       targetBlur,
