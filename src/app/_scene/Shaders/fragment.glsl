@@ -4,6 +4,7 @@ uniform vec2 uResolution;
 
 uniform sampler2D uSceneOneTexture;
 uniform sampler2D uNoiseTexture;
+uniform sampler2D uBlurNoiseSampleTexture;
 
 uniform float uTime;
 uniform float uInitialTransition;
@@ -15,6 +16,12 @@ uniform float uSaturation;
 uniform vec2  uVignetteSize;
 uniform float uVignetteRoundness;
 uniform float uVignetteSmoothness;
+uniform float uBlurProgress;
+
+uniform vec2  uBlurMaskSize;
+uniform float uBlurMaskRoundness;
+uniform float uBlurMaskSmoothness;
+uniform float uBlurMaskStrength;
 
 
 // ---------------------------------------------------------------------------
@@ -59,10 +66,12 @@ vec3 grayscale(vec3 color, float amount) {
     return mix(color, vec3(luma), amount);
 }
 
-// For all settings: 1.0 = 100% 0.5=50% 1.5 = 150%
+// ---------------------------------------------------------------------------
+// Contrast, Saturation, Brightness: basic colour grade adjustment.
+// For all settings: 1.0 = 100%, 0.5 = 50%, 1.5 = 150%.
+// ---------------------------------------------------------------------------
 vec3 ContrastSaturationBrightness(vec3 color, float brt, float sat, float con)
 {
-	// Increase or decrease theese values to adjust r, g and b color channels seperately
 	const float AvgLumR = 0.5;
 	const float AvgLumG = 0.5;
 	const float AvgLumB = 0.5;
@@ -78,17 +87,68 @@ vec3 ContrastSaturationBrightness(vec3 color, float brt, float sat, float con)
 	return conColor;
 }
 
+// ---------------------------------------------------------------------------
+// Jittered Noise Blur: optimized tap sampling using noise texture.
+// ---------------------------------------------------------------------------
+vec3 boxBlur(sampler2D tex, sampler2D noiseTex, vec2 uv, float progress, vec2 res, float chromatic) {
+    if (progress <= 0.0) {
+        if (chromatic > 0.0) return rgbShift(tex, uv, chromatic);
+        return texture2D(tex, uv).rgb;
+    }
+    
+    float radius = progress * 10.0; 
+    vec3 acc = vec3(0.0);
+    
+    // Increased noise frequency (tiling) for finer jitter
+    // Using a single noise sample to derive multiple offsets for performance
+    vec4 noise = texture2D(noiseTex, uv * 8.0); 
+    
+    // Static pre-calculated base directions for better distribution
+    const vec2 dirs[8] = vec2[8](
+        vec2(1.0, 0.0), vec2(-1.0, 0.0), vec2(0.0, 1.0), vec2(0.0, -1.0),
+        vec2(0.707, 0.707), vec2(-0.707, 0.707), vec2(0.707, -0.707), vec2(-0.707, -0.707)
+    );
+
+    // Center sample
+    if (chromatic > 0.0) acc += rgbShift(tex, uv, chromatic);
+    else acc += texture2D(tex, uv).rgb;
+
+    // Jittered taps
+    for(int i = 0; i < 8; i++) {
+        // Use noise to scramble the static directions
+        float jitter = (i % 2 == 0) ? noise.r : noise.g;
+        vec2 offsetUv = uv + (dirs[i] * jitter * radius) / res;
+        
+        if (chromatic > 0.0) {
+            acc += rgbShift(tex, offsetUv, chromatic);
+        } else {
+            acc += texture2D(tex, offsetUv).rgb;
+        }
+    }
+    
+    return acc / 9.0;
+}
+
 
 
 void main() {
     // Noise texture sampled directly at plane UVs
-    float noise = (texture2D(uNoiseTexture, vUv).r - 0.5) * 0.3;
+    float noiseVal = (texture2D(uNoiseTexture, vUv).r - 0.5) * 0.3;
 
     // Simple fade-in: uInitialTransition 0→1, noise roughens the edge during transition
-    float alpha = smoothstep(0.0, 1.0, uInitialTransition + noise);
+    float alpha = smoothstep(0.0, 1.0, uInitialTransition + noiseVal);
 
-    // RGB shift (chromatic aberration)
-    vec3 color = rgbShift(uSceneOneTexture, vUv, uChromaticAberration);
+    // Calculate vignette mask for color
+    float vMask = vignette(vUv, uVignetteSize, uVignetteRoundness, uVignetteSmoothness);
+    
+    // Calculate separate blur mask based on new factors
+    float bMask = vignette(vUv, uBlurMaskSize, uBlurMaskRoundness, uBlurMaskSmoothness);
+    
+    // Blur inversely following the blur mask, also scaled by global uBlurProgress
+    float blurAmt = uBlurMaskStrength * (1.0 - bMask) * uBlurProgress;
+    
+    // Sample texture with jittered noise blur and chromatic aberration handled together
+    vec3 color = boxBlur(uSceneOneTexture, uBlurNoiseSampleTexture, vUv, blurAmt, uResolution, uChromaticAberration);
 
     // Grayscale
     color = grayscale(color, uGrayScale);
@@ -97,8 +157,8 @@ void main() {
     // Contrast, saturation, brightness
     color = ContrastSaturationBrightness(color, uBrighness, uSaturation, uContrast);
 
-    // Vignette (advanced): size controls shape extents, roundness corners, smoothness fade width
-    color *= vignette(vUv, uVignetteSize, uVignetteRoundness, uVignetteSmoothness);
+    // Vignette (advanced): apply the mask
+    color *= vMask;
 
     gl_FragColor = vec4(color, alpha);
     #include <tonemapping_fragment>

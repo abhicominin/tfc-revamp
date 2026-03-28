@@ -16,7 +16,7 @@ const CAMERA_CONFIG = {
     '/About':    { zoom: 2.9, lookAt: [-0.1, 0, 0], position: DEFAULT_POSITION },
     '/Project':  { zoom: 5.0, lookAt: [-0.1, 0.258, 0], position: [4.35, 4.7, 4.35] },
     '/Contacts': { zoom: 3.4, lookAt: [-0.1, 0.15, 0], position: [4.8, 5.05, 4.8] },
-    '/Service':  { zoom: 11, lookAt: [0.85, -3.0, 0.6], position: [0.85, 2.0, 1.0] },
+    '/Service':  { zoom: 11, lookAt: [0.98, -4.0, 0.6], position: [0.98, 2.0, 1.0] },
 };
 
 const DEFAULT_CONFIG = CAMERA_CONFIG['/'];

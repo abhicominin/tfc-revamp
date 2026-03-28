@@ -1,8 +1,9 @@
 import { useFrame, useThree, createPortal } from "@react-three/fiber";
-import { useFBO, useProgress, SoftShadows } from "@react-three/drei";
+import { useFBO, useProgress, SoftShadows, useTexture } from "@react-three/drei";
 import { useRef, Suspense, useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { useControls } from "leva";
+import { usePathname } from "next/navigation";
 
 import vertexShader from "../Shaders/vertex.glsl";
 import fragmentShader from "../Shaders/fragment.glsl";
@@ -16,16 +17,27 @@ import FloorMenu from "./Objects/Floormenu";
 
 import useSceneStore from "../scenestore";
 
+// Noise texture
+const NOISE_TEXTURE_URL = "/Images/noise2.png";
+
 const PortalSetup = () => {
   const mesh = useRef();
   const cameraRef = useRef();
   const { viewport, size } = useThree();
+  const pathname = usePathname();
 
   const groupHovered = useSceneStore((state) => state.groupHovered);
 
   const { active, progress } = useProgress();
   const transitionValue = useRef(0);
   const revealStarted = useRef(false);
+
+  const noisetexture = useTexture(NOISE_TEXTURE_URL);
+  noisetexture.wrapS = THREE.RepeatWrapping;
+  noisetexture.wrapT = THREE.RepeatWrapping;
+
+  noisetexture.minFilter = THREE.NearestMipmapLinearFilter;
+  noisetexture.magFilter = THREE.NearestMipmapLinearFilter;
 
   // Start the iris reveal after the loading screen's 0.9s exit animation finishes
   useEffect(() => {
@@ -42,6 +54,15 @@ const PortalSetup = () => {
     fogColor: "#000000",
     fogNear: { value: 0.01, min: 0, max: 20, step: 0.01 },
     fogFar:  { value: 3,    min: 0, max: 50, step: 0.1  },
+  });
+
+  const { blurProgress, blurMaskWidth, blurMaskHeight, blurMaskRoundness, blurMaskSmoothness, blurMaskStrength } = useControls("Blur", {
+    blurProgress: { value: 2.0, min: 0, max: 1, step: 0.01 },
+    blurMaskWidth: { value: 0.42, min: 0, max: 1, step: 0.01 },
+    blurMaskHeight: { value: 0.37, min: 0, max: 1, step: 0.01 },
+    blurMaskRoundness: { value: 1.00, min: 0, max: 1, step: 0.01 },
+    blurMaskSmoothness: { value: 0.09, min: 0, max: 1, step: 0.01 },
+    blurMaskStrength: { value: 1.24, min: 0, max: 5, step: 0.01 },
   });
 
   const { bgColor } = useControls("Background", {
@@ -67,9 +88,15 @@ const PortalSetup = () => {
     uBrighness: new THREE.Uniform(0.9),
     uContrast: new THREE.Uniform(1.05),
     uSaturation: new THREE.Uniform(1.0),
+    uBlurMaskSize: new THREE.Uniform(new THREE.Vector2(0.43, 0.43)),
+    uBlurProgress: new THREE.Uniform(0.0),
+    uBlurMaskRoundness: new THREE.Uniform(0.77),
+    uBlurMaskSmoothness: new THREE.Uniform(0.31),
+    uBlurMaskStrength: new THREE.Uniform(0.0),
     uVignetteSize: new THREE.Uniform(new THREE.Vector2(0.43, 0.43)),
     uVignetteRoundness: new THREE.Uniform(0.77),
     uVignetteSmoothness: new THREE.Uniform(0.31),
+    uBlurNoiseSampleTexture: new THREE.Uniform(noisetexture),
   }), []);
 
   useFrame((state, delta) => {
@@ -82,6 +109,12 @@ const PortalSetup = () => {
       size.width,
       size.height
     );
+    mesh.current.material.uniforms.uBlurProgress.value = blurProgress;
+    mesh.current.material.uniforms.uBlurMaskSize.value.set(blurMaskWidth, blurMaskHeight);
+    mesh.current.material.uniforms.uBlurMaskRoundness.value = blurMaskRoundness;
+    mesh.current.material.uniforms.uBlurMaskSmoothness.value = blurMaskSmoothness;
+    mesh.current.material.uniforms.uBlurMaskStrength.value = blurMaskStrength;
+    mesh.current.material.uniforms.uBlurNoiseSampleTexture.value = noisetexture;
     // Animate iris reveal after loading screen exits (~4s duration at speed 0.25)
     if (revealStarted.current && transitionValue.current < 1) {
       transitionValue.current = Math.min(transitionValue.current + delta * 0.21, 1);
@@ -104,6 +137,12 @@ const PortalSetup = () => {
       groupHovered ? 0.85 : 0.9,
       0.1
     );
+    const targetBlur = (groupHovered || pathname === "/Contacts") ? 10.0 : blurProgress;
+    mesh.current.material.uniforms.uBlurProgress.value = THREE.MathUtils.lerp(
+      mesh.current.material.uniforms.uBlurProgress.value,
+      targetBlur,
+      0.1
+    );
 
 
     // Render the first scene to its render target
@@ -111,6 +150,7 @@ const PortalSetup = () => {
     gl.render(sceneOne, cameraRef.current);
     mesh.current.material.uniforms.uSceneOneTexture.value = renderTargetOne.texture;
     mesh.current.material.uniforms.uNoiseTexture.value = renderTargetOne.texture;
+
 
     // Reset to default framebuffer
     gl.setRenderTarget(null);
@@ -129,7 +169,7 @@ const PortalSetup = () => {
         />
       </mesh>
 
-      <SoftShadows size={30} focus={0.9} samples={10} />
+      <SoftShadows size={25} focus={0.8} samples={10} />
 
       {createPortal(
         <>

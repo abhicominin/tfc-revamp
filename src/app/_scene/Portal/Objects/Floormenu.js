@@ -50,7 +50,8 @@ function isInteractive(material) {
 export default function FloorMenu() {
 
     const groupRef = useRef()
-    const materialsRef = useRef([])  
+    const materialsRef = useRef([])
+    const textRefs = useRef([])
     const router = useRouter();
     const pathname = usePathname()
     const setTextHovered = useSceneStore((state) => state.setTextHovered)
@@ -97,6 +98,13 @@ export default function FloorMenu() {
             material.color.lerp(material.userData.targetColor, 0.12)
             material.opacity += (material.userData.targetOpacity - material.opacity) * 0.12
         })
+
+        const targetScale = pathname === '/Service' ? 1.8 : 1.0
+        textRefs.current.forEach((mesh) => {
+            if (!mesh) return
+            mesh.scale.x += (targetScale - mesh.scale.x) * 0.1
+            mesh.scale.y += (targetScale - mesh.scale.y) * 0.1
+        })
     })
 
     return(
@@ -105,12 +113,17 @@ export default function FloorMenu() {
             ref={groupRef}
             position={[rubic_config.cube_size * 2.79, 0.01, rubic_config.cube_size * 2.79]}
             rotation-x={-Math.PI / 2}
-            onPointerEnter={() => setGroupHovered(true)}
+            onPointerEnter={() => {
+                if (materialsRef.current.some(m => m && m.opacity > INTERACTION_OPACITY_THRESHOLD)) {
+                    setGroupHovered(true)
+                }
+            }}
             onPointerLeave={() => setGroupHovered(false)}
         >
             {links.map((link, index) => (
                 <Text
                     key={link.label}
+                    ref={el => textRefs.current[index] = el}
                     position={[0, index * -0.1, 0]}
                     font='/Fonts/FuturaCyrillicMedium.ttf'
                     fontSize={0.08}

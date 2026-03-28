@@ -21,9 +21,10 @@ const VERT_DISPLACEMENT = `
 `;
 
 const DEFAULT_POSITION = new THREE.Vector3(0.32, 0.58, 0.0);
-const SERVICE_POSITION = new THREE.Vector3(0.20, 0.3, 0.0);
+const SERVICE_POSITION = new THREE.Vector3(0.20, 0.2, 0.0);
 const DEFAULT_ROTATION_Z = THREE.MathUtils.degToRad(-75);
 const SERVICE_ROTATION_Z = THREE.MathUtils.degToRad(-80);
+const DEFAULT_SHADOW_OPACITY = 0.65;
 
 export default function Plant() {
   const pathname = usePathname();
@@ -68,6 +69,12 @@ export default function Plant() {
     }
     if (depthShaderRef.current) {
       depthShaderRef.current.uniforms.uTime.value = t;
+      const targetShadowOpacity = pathname === '/Contacts' ? 0 : DEFAULT_SHADOW_OPACITY;
+      depthShaderRef.current.uniforms.uShadowOpacity.value = THREE.MathUtils.lerp(
+        depthShaderRef.current.uniforms.uShadowOpacity.value,
+        targetShadowOpacity,
+        0.08
+      );
     }
   });
 
@@ -90,12 +97,11 @@ export default function Plant() {
     mat.onBeforeCompile = (shader) => {
       shader.uniforms.uTime = { value: 0 };
       depthShaderRef.current = shader;
-      shader.uniforms.uShadowOpacity = { value: 0.65 };
+      shader.uniforms.uShadowOpacity = { value: DEFAULT_SHADOW_OPACITY };
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>',      VERT_UNIFORMS)
         .replace('#include <begin_vertex>', VERT_DISPLACEMENT);
-      // Bayer 4x4 ordered dither — discard N% of shadow pixels to make shadow lighter.
-      // Only affects this mesh's shadow. Shape unchanged. Tune threshold: 0=full, 1=none.
+      // 8x8 ordered dither: less visible than coarse/noisy patterns, with smoother fade steps.
       shader.fragmentShader = shader.fragmentShader
         .replace('void main() {', `
           uniform float uShadowOpacity;
@@ -104,10 +110,16 @@ export default function Plant() {
             vec2 p1 = mod(v, 2.0); vec2 p2 = mod(floor(0.5*v), 2.0);
             return (4.0*_b2(p1) + _b2(p2)) / 16.0;
           }
+          float _b8(vec2 v) {
+            vec2 p1 = mod(v, 2.0);
+            vec2 p2 = mod(floor(0.5*v), 2.0);
+            vec2 p3 = mod(floor(0.25*v), 2.0);
+            return (16.0*_b2(p1) + 4.0*_b2(p2) + _b2(p3)) / 64.0;
+          }
           void main() {`)
         .replace('#include <alphatest_fragment>', `
           #include <alphatest_fragment>
-          if (_b4(floor(mod(gl_FragCoord.xy, 4.0))) >= uShadowOpacity) discard;
+          if (_b8(floor(mod(gl_FragCoord.xy, 8.0))) >= uShadowOpacity) discard;
         `);
     };
     return mat;

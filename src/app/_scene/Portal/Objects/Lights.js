@@ -1,20 +1,160 @@
-import { Vector3 } from "three"
-import { Environment, SpotLight, SpotLightShadow } from "@react-three/drei"
-import { useRef, useEffect } from "react"
-import { MathUtils } from "three"
+import {
+    DoubleSide,
+    MathUtils,
+    RepeatWrapping,
+    RGBAFormat,
+    ShaderMaterial,
+    Vector3,
+    WebGLRenderTarget,
+} from "three"
+import { Environment, SpotLight } from "@react-three/drei"
+import { useRef, useEffect, useLayoutEffect, useMemo } from "react"
+import { useFrame } from "@react-three/fiber"
+import { FullScreenQuad } from "three-stdlib"
+import { usePathname } from "next/navigation"
 import { ASSETS } from "@/app/asset"
 
 import Curtain from "../Shadows/Homecurtain"
 import Plant from "../Shadows/Homebranch"
 import StaticBird from "../Shadows/Homebird"
 
+function SpotLightShadowWithUniform({
+    spotlightRef,
+    debug = false,
+    scale = 1,
+    distance = 0.4,
+    alphaTest = 0.5,
+    map,
+    shader,
+    width = 512,
+    height = 512,
+    defaultFragColorValue = 1.0,
+    transitionSpeed = 0.001,
+}) {
+    const meshRef = useRef()
+    const shadowDirection = useMemo(() => new Vector3(), [])
+    const shadowPosition = useMemo(() => new Vector3(), [])
+
+    const uniformsRef = useRef({
+        uShadowMap: { value: map },
+        uTime: { value: 0 },
+        uDefaultFragColorValue: { value: defaultFragColorValue },
+    })
+
+    const renderTarget = useMemo(
+        () =>
+            new WebGLRenderTarget(width, height, {
+                format: RGBAFormat,
+                stencilBuffer: false,
+            }),
+        [width, height]
+    )
+
+    const fsQuad = useMemo(
+        () =>
+            new FullScreenQuad(
+                new ShaderMaterial({
+                    uniforms: uniformsRef.current,
+                    vertexShader: /* glsl */ `
+                    varying vec2 vUv;
+
+                    void main() {
+                        vUv = uv;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                    `,
+                    fragmentShader: shader,
+                })
+            ),
+        [shader]
+    )
+
+    useLayoutEffect(() => {
+        if (!spotlightRef?.current) return
+
+        spotlightRef.current.shadow.mapSize.set(width, height)
+        spotlightRef.current.shadow.needsUpdate = true
+    }, [spotlightRef, width, height])
+
+    useEffect(() => {
+        uniformsRef.current.uShadowMap.value = map
+    }, [map])
+
+    useEffect(() => {
+        // Keep initial sync when route changes before first frame tick.
+        uniformsRef.current.uDefaultFragColorValue.value = defaultFragColorValue
+    }, [defaultFragColorValue])
+
+    useEffect(() => {
+        return () => {
+            fsQuad.material.dispose()
+            fsQuad.dispose()
+        }
+    }, [fsQuad])
+
+    useEffect(() => {
+        return () => {
+            renderTarget.dispose()
+        }
+    }, [renderTarget])
+
+    useFrame((_, dt) => {
+        uniformsRef.current.uTime.value += dt
+
+        const currentValue = uniformsRef.current.uDefaultFragColorValue.value
+        const lerpFactor = 1 - Math.exp(-transitionSpeed * dt)
+        uniformsRef.current.uDefaultFragColorValue.value = MathUtils.lerp(
+            currentValue,
+            defaultFragColorValue,
+            lerpFactor
+        )
+
+        if (!spotlightRef?.current || !meshRef.current) return
+
+        const lightPosition = spotlightRef.current.position
+        const targetPosition = spotlightRef.current.target.position
+
+        shadowDirection.copy(targetPosition).sub(lightPosition)
+        const targetDistance = shadowDirection.length()
+        shadowDirection.normalize().multiplyScalar(targetDistance * distance)
+        shadowPosition.copy(lightPosition).add(shadowDirection)
+
+        meshRef.current.position.copy(shadowPosition)
+        meshRef.current.lookAt(targetPosition)
+    })
+
+    useFrame(({ gl }) => {
+        gl.setRenderTarget(renderTarget)
+        fsQuad.render(gl)
+        gl.setRenderTarget(null)
+    })
+
+    return (
+        <mesh ref={meshRef} scale={scale} castShadow>
+            <planeGeometry />
+            <meshBasicMaterial
+                transparent
+                side={DoubleSide}
+                alphaTest={alphaTest}
+                alphaMap={renderTarget.texture}
+                alphaMap-wrapS={RepeatWrapping}
+                alphaMap-wrapT={RepeatWrapping}
+                opacity={debug ? 1 : 0}
+            />
+        </mesh>
+    )
+}
+
 export default function Environments()
 {
+    const pathname = usePathname()
     const spotLightRef = useRef()
     const shadowGroupRef = useRef()
 
+    const defaultFragColorValue = pathname === "/Contacts" ? 0.0 : 1.0;
+
     useEffect(() => {
-            if (!spotLightRef.current || !shadowGroupRef.current) return
+      if (!spotLightRef.current || !shadowGroupRef.current) return
 
       // Get world position of the spotlight
       const worldPosition = new Vector3()
@@ -53,16 +193,21 @@ export default function Environments()
            volumetric={false}
            opacity={1}
           >
-            <SpotLightShadow
+            <SpotLightShadowWithUniform
+              spotlightRef={spotLightRef}
+              debug={false}
               scale={3.4}
               distance={0.65}
               width={2048}
               height={2048}
+              defaultFragColorValue={defaultFragColorValue}
+              transitionSpeed={0.001}
               shader={
               /* glsl */ `
                varying vec2 vUv;
    
                uniform float uTime;
+               uniform float uDefaultFragColorValue;
    
                float bayerDither2x2( vec2 v ) {
                    return mod( 3.0 * v.y + 2.0 * v.x, 4.0 );
@@ -111,7 +256,7 @@ export default function Environments()
                    float shadow = (1.0 - ((box3 * box2) - box1));
    
                    if( ( bayerDither4x4( floor( mod( gl_FragCoord.xy, 4.0 ) ) ) ) / 16.0 >= shadow ) discard;
-                   gl_FragColor = vec4(1.0);
+                   gl_FragColor = vec4(vec3(uDefaultFragColorValue), 1.0);
                }
                `
                }
