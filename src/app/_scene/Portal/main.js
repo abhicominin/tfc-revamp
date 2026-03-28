@@ -169,8 +169,6 @@ const PortalSetup = () => {
         />
       </mesh>
 
-      <SoftShadows size={25} focus={0.8} samples={10} />
-
       {createPortal(
         <>
          <Camera ref={cameraRef} />
@@ -199,9 +197,12 @@ const PortalSetup = () => {
 
 const Main = () => {
   return (
-      <Suspense fallback={null}>
-        <PortalSetup />
-      </Suspense>
+      <>
+        <SoftShadows size={25} focus={0.8} samples={10} />
+        <Suspense fallback={null}>
+          <PortalSetup />
+        </Suspense>
+      </>
   )
 }
 
