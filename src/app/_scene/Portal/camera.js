@@ -9,13 +9,14 @@ import useSceneStore from "../scenestore";
 const FRUSTUM = 3.5;
 const PROJECT_PATH = '/Project';
 const HOVER_ZOOM_OFFSET = 0.27;
+const DEFAULT_POSITION = [5, 5, 5];
 
 const CAMERA_CONFIG = {
-    '/':         { zoom: 2.9, lookAt: [-0.1, 0, 0] },
-    '/About':    { zoom: 2.9, lookAt: [-0.1, 0, 0] },
-    '/Project':  { zoom: 5.0, lookAt: [-0.1, 0.258, 0] },
-    '/Contacts': { zoom: 3.4, lookAt: [-0.1, 0.15, 0] },
-    '/Service':  { zoom: 11, lookAt: [2.0, 0, 2.0] },
+    '/':         { zoom: 2.9, lookAt: [-0.1, 0, 0], position: DEFAULT_POSITION },
+    '/About':    { zoom: 2.9, lookAt: [-0.1, 0, 0], position: DEFAULT_POSITION },
+    '/Project':  { zoom: 5.0, lookAt: [-0.1, 0.258, 0], position: [4.35, 4.7, 4.35] },
+    '/Contacts': { zoom: 3.4, lookAt: [-0.1, 0.15, 0], position: [4.8, 5.05, 4.8] },
+    '/Service':  { zoom: 11, lookAt: [0.85, -3.0, 0.6], position: [0.85, 2.0, 1.0] },
 };
 
 const DEFAULT_CONFIG = CAMERA_CONFIG['/'];
@@ -27,11 +28,15 @@ function getCameraConfig(pathname) {
 }
 
 function toSpringTarget(config) {
+    const position = config.position ?? DEFAULT_POSITION;
     return {
         zoom: config.zoom,
         lx: config.lookAt[0],
         ly: config.lookAt[1],
         lz: config.lookAt[2],
+        px: position[0],
+        py: position[1],
+        pz: position[2],
     };
 }
 
@@ -72,6 +77,9 @@ const Camera = forwardRef(({ transitionSpring }, ref) => {
                 lx:   spring.lx.get(),
                 ly:   spring.ly.get(),
                 lz:   spring.lz.get(),
+                px:   spring.px.get(),
+                py:   spring.py.get(),
+                pz:   spring.pz.get(),
             };
             return;
         }
@@ -103,23 +111,37 @@ const Camera = forwardRef(({ transitionSpring }, ref) => {
         if (!ref.current) return;
 
         let baseZoom;
+        let baseX;
+        let baseY;
+        let baseZ;
+        let lookX;
+        let lookY;
+        let lookZ;
 
         if (pathname === PROJECT_PATH && hasProjectTransition) {
             // Lerp camera in lockstep with the portal shader transition
             const p = Math.min(Math.max(transitionSpring.progress.get(), 0), 1);
-            const { zoom: fz, lx: flx, ly: fly, lz: flz } = transitionFromRef.current;
+            const { zoom: fz, lx: flx, ly: fly, lz: flz, px: fpx, py: fpy, pz: fpz } = transitionFromRef.current;
             const tc = getCameraConfig(PROJECT_PATH);
             baseZoom = fz + (tc.zoom - fz) * p;
-            ref.current.lookAt(
-                flx + (tc.lookAt[0] - flx) * p,
-                fly + (tc.lookAt[1] - fly) * p,
-                flz + (tc.lookAt[2] - flz) * p,
-            );
+            baseX = fpx + (tc.position[0] - fpx) * p;
+            baseY = fpy + (tc.position[1] - fpy) * p;
+            baseZ = fpz + (tc.position[2] - fpz) * p;
+            lookX = flx + (tc.lookAt[0] - flx) * p;
+            lookY = fly + (tc.lookAt[1] - fly) * p;
+            lookZ = flz + (tc.lookAt[2] - flz) * p;
         } else {
             baseZoom = spring.zoom.get();
-            ref.current.lookAt(spring.lx.get(), spring.ly.get(), spring.lz.get());
+            baseX = spring.px.get();
+            baseY = spring.py.get();
+            baseZ = spring.pz.get();
+            lookX = spring.lx.get();
+            lookY = spring.ly.get();
+            lookZ = spring.lz.get();
         }
 
+        ref.current.position.set(baseX, baseY, baseZ);
+        ref.current.lookAt(lookX, lookY, lookZ);
         ref.current.zoom = baseZoom + hoverSpring.hoverOffset.get();
 
         ref.current.updateProjectionMatrix();
@@ -129,7 +151,7 @@ const Camera = forwardRef(({ transitionSpring }, ref) => {
         <OrthographicCamera
             ref={ref}
             makeDefault
-            position={[5, 5, 5]}
+            position={DEFAULT_POSITION}
             near={0.1}
             far={1000}
         />

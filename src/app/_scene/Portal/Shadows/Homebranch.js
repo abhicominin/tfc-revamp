@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { useTexture } from "@react-three/drei"
 import { useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import { useFrame } from "@react-three/fiber";
+import { usePathname } from "next/navigation";
 import { ASSETS } from '@/app/asset'
 
 // Displacement chunks shared between the visible material and the depth (shadow) material
@@ -19,7 +20,13 @@ const VERT_DISPLACEMENT = `
   transformed.z += sin(uTime * 0.3 + position.x * 0.5) * 0.2 * strength;
 `;
 
+const DEFAULT_POSITION = new THREE.Vector3(0.32, 0.58, 0.0);
+const SERVICE_POSITION = new THREE.Vector3(0.20, 0.3, 0.0);
+const DEFAULT_ROTATION_Z = THREE.MathUtils.degToRad(-75);
+const SERVICE_ROTATION_Z = THREE.MathUtils.degToRad(-80);
+
 export default function Plant() {
+  const pathname = usePathname();
   const sourceMap = useTexture(ASSETS.ASSETS.TEXTURES.BRANCH);
 
   const map = useMemo(() => {
@@ -36,9 +43,26 @@ export default function Plant() {
   const visibleShaderRef = useRef(null);
   const depthShaderRef = useRef(null);
   const meshRef = useRef();
+  const targetPositionRef = useRef(DEFAULT_POSITION.clone());
+  const targetRotationZRef = useRef(DEFAULT_ROTATION_Z);
+
+  useEffect(() => {
+    targetPositionRef.current.copy(pathname === '/Service' ? SERVICE_POSITION : DEFAULT_POSITION);
+    targetRotationZRef.current = pathname === '/Service' ? SERVICE_ROTATION_Z : DEFAULT_ROTATION_Z;
+  }, [pathname]);
 
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
+
+    if (meshRef.current) {
+      meshRef.current.position.lerp(targetPositionRef.current, 0.08);
+      meshRef.current.rotation.z = THREE.MathUtils.lerp(
+        meshRef.current.rotation.z,
+        targetRotationZRef.current,
+        0.08
+      );
+    }
+
     if (visibleShaderRef.current) {
       visibleShaderRef.current.uniforms.uTime.value = t;
     }
@@ -107,9 +131,9 @@ export default function Plant() {
       <mesh
         ref={meshRef}
         castShadow
-        position={[0.32, 0.58, 0]}
+        position={[DEFAULT_POSITION.x, DEFAULT_POSITION.y, DEFAULT_POSITION.z]}
         scale={1.9}
-        rotation-z={THREE.MathUtils.degToRad(-75)}
+        rotation-z={DEFAULT_ROTATION_Z}
       >
         <planeGeometry args={[1, 1]} />
         <meshStandardMaterial

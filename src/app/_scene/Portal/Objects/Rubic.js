@@ -37,7 +37,7 @@ const Rubic = forwardRef(function Rubic({ children }, ref) {
       meshPhysicalMaterial: false,
       transmissionSampler: true,
       backside: false,
-      samples: 15,
+      samples: 10,
       resolution: 512,
       transmission: 0.97,
       roughness: 0.0,

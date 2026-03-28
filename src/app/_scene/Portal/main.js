@@ -129,8 +129,8 @@ const PortalSetup = () => {
         />
       </mesh>
 
-      
-  
+      <SoftShadows size={30} focus={0.9} samples={10} />
+
       {createPortal(
         <>
          <Camera ref={cameraRef} />
@@ -140,7 +140,6 @@ const PortalSetup = () => {
          <Rubic />
          <Floor />
          <FloorMenu />
-         <SoftShadows samples={10} size={25} focus={0.8}/>
          <color attach="background" args={[bgColor]} />
         </>
          ,

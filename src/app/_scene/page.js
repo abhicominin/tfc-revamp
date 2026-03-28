@@ -1,7 +1,9 @@
 'use client'
+import { PCFSoftShadowMap } from "three"
 import { SRGBColorSpace } from "three"
 import { Preload, OrthographicCamera } from "@react-three/drei"
 import { Canvas } from "@react-three/fiber"
+
 
 import { Perf } from "r3f-perf"
 import Main from "./Portal/main"
@@ -25,6 +27,8 @@ export default function Scene() {
               onCreated={({ gl }) => {
                 gl.autoClear = false;
                 gl.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
+                gl.shadowMap.enabled = true;
+                gl.shadowMap.type = PCFSoftShadowMap;
               }}
            >
                 <Preload all />

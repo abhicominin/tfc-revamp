@@ -5,7 +5,7 @@ export default function Service() {
     <>
       <PageWrap>
         <main className="w-full h-full flex justify-center items-center">
-          <h1 className="text-[40px] text-white font-futura-demi">Service Page</h1>
+          <h1 className="text-[40px] text-white font-futura-demi"></h1>
         </main>
       </PageWrap>
     </>
