@@ -17,6 +17,7 @@ import { ASSETS } from "@/app/asset"
 import Curtain from "../Shadows/Homecurtain"
 import Plant from "../Shadows/Homebranch"
 import StaticBird from "../Shadows/Homebird"
+import FlyingBird from "../Shadows/HomeFlyingbird"
 
 function SpotLightShadowWithUniform({
     spotlightRef,
@@ -174,6 +175,7 @@ export default function Environments()
             <Curtain/>
             <Plant/>
             <StaticBird/>
+            <FlyingBird/>
          </group>
 
          <SpotLight
@@ -183,11 +185,12 @@ export default function Environments()
            penumbra={1.2}
            angle={MathUtils.degToRad(8)}
            color={"#ffffff"}
-           attenuation={17}
+           attenuation={25}
            distance={21}
            debug={false}
-           volumetric={false}
+           volumetric={true}
            opacity={1}
+           castShadow
           >
             <SpotLightShadowWithUniform
               spotlightRef={spotLightRef}

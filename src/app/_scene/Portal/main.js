@@ -1,5 +1,5 @@
 import { useFrame, useThree, createPortal } from "@react-three/fiber";
-import { useFBO, useProgress, SoftShadows, useTexture } from "@react-three/drei";
+import { useFBO, useProgress, SoftShadows, useTexture, Sparkles } from "@react-three/drei";
 import { useRef, Suspense, useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { useControls } from "leva";
@@ -190,6 +190,14 @@ const PortalSetup = () => {
          <Camera ref={cameraRef} />
          {/* <PerspectiveCameraComponent ref={cameraRef} /> */}
          {/* <fog attach="fog" args={[fogColor, fogNear, fogFar]} /> */}
+         <Sparkles
+           count={150}
+           scale={5}
+           size={ groupHovered ? 1.5 : 1.2 }
+           noise={50}
+           speed={ groupHovered ? 0.1 : 0.5 }
+           opacity={ pathname === '/Service' ? 0 : 1 }
+         />
          <Environments />
          <Rubic />
          <Floor />
