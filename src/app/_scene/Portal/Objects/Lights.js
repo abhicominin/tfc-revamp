@@ -156,10 +156,6 @@ export default function Environments()
     useEffect(() => {
       if (!spotLightRef.current || !shadowGroupRef.current) return
 
-      // Get world position of the spotlight
-      const worldPosition = new Vector3()
-      spotLightRef.current.getWorldPosition(worldPosition)
-
       spotLightRef.current.getWorldPosition(shadowGroupRef.current.position)
       shadowGroupRef.current.position.multiplyScalar(0.3)
       shadowGroupRef.current.lookAt(0, 0, 0)

@@ -63,6 +63,7 @@ export default function Curtain(){
 
   useEffect(() => {
     return () => {
+      depthShaderRef.current = null
       material.dispose()
       depthMaterial.dispose()
     }

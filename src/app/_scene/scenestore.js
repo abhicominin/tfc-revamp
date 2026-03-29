@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 const useSceneStore = create((set) => ({
-  textHovered: false,
+  textHovered: null,
   setTextHovered: (textHovered) => set({ textHovered }),
 
   groupHovered: false,

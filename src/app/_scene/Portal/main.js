@@ -32,12 +32,15 @@ const PortalSetup = () => {
   const transitionValue = useRef(0);
   const revealStarted = useRef(false);
 
-  const noisetexture = useTexture(NOISE_TEXTURE_URL);
-  noisetexture.wrapS = THREE.RepeatWrapping;
-  noisetexture.wrapT = THREE.RepeatWrapping;
-
-  noisetexture.minFilter = THREE.NearestMipmapLinearFilter;
-  noisetexture.magFilter = THREE.NearestMipmapLinearFilter;
+  const rawNoiseTexture = useTexture(NOISE_TEXTURE_URL);
+  const noisetexture = useMemo(() => {
+    rawNoiseTexture.wrapS = THREE.RepeatWrapping;
+    rawNoiseTexture.wrapT = THREE.RepeatWrapping;
+    rawNoiseTexture.minFilter = THREE.NearestMipmapLinearFilter;
+    rawNoiseTexture.magFilter = THREE.NearestMipmapLinearFilter;
+    rawNoiseTexture.needsUpdate = true;
+    return rawNoiseTexture;
+  }, [rawNoiseTexture]);
 
   // Start the iris reveal after the loading screen's 0.9s exit animation finishes
   useEffect(() => {
@@ -85,8 +88,8 @@ const PortalSetup = () => {
     uNoiseTexture: new THREE.Uniform(null),
     uChromaticAberration: new THREE.Uniform(0.0),
     uGrayScale: new THREE.Uniform(0.0),
-    uBrighness: new THREE.Uniform(0.9),
-    uContrast: new THREE.Uniform(1.05),
+    uBrighness: new THREE.Uniform(1.1),
+    uContrast: new THREE.Uniform(1.0),
     uSaturation: new THREE.Uniform(1.0),
     uBlurMaskSize: new THREE.Uniform(new THREE.Vector2(0.43, 0.43)),
     uBlurProgress: new THREE.Uniform(0.0),
@@ -142,12 +145,12 @@ const PortalSetup = () => {
     );
     mesh.current.material.uniforms.uContrast.value = THREE.MathUtils.lerp(
       mesh.current.material.uniforms.uContrast.value,
-      groupHovered ? 1.1 : 1.05,
+      groupHovered ? 1.1 : 1.0,
       0.1
     );
     mesh.current.material.uniforms.uBrighness.value = THREE.MathUtils.lerp(
       mesh.current.material.uniforms.uBrighness.value,
-      groupHovered ? 0.85 : 0.9,
+      groupHovered ? 0.85 : 1.0,
       0.1
     );
     const targetBlur = (groupHovered || pathname === "/Contacts") ? 1.5 : isService ? 1.0 : blurProgress;

@@ -1,6 +1,6 @@
 import { Text } from "@react-three/drei"
 import { useRouter, usePathname } from "next/navigation"
-import { useRef } from "react"
+import { useRef, useEffect } from "react"
 import { useFrame } from "@react-three/fiber"
 import { Color } from "three"
 
@@ -52,24 +52,25 @@ export default function FloorMenu() {
     const groupRef = useRef()
     const materialsRef = useRef([])
     const textRefs = useRef([])
+    const whooshRef = useRef(null)
     const router = useRouter();
     const pathname = usePathname()
     const setTextHovered = useSceneStore((state) => state.setTextHovered)
     const setGroupHovered = useSceneStore((state) => state.setGroupHovered)
     const setMenutextClicked = useSceneStore((state) => state.setMenutextClicked)
 
-    const handlePointerEnter = (event) => {
+    const handlePointerEnter = (event, link) => {
         const material = event.object.material
         if (!isInteractive(material)) return
         material.userData.targetColor = HOVER_TEXT_COLOR
-        setTextHovered(true)
+        setTextHovered(link.href)
     }
 
     const handlePointerLeave = (event) => {
         const material = event.object.material
         if (!material) return
         material.userData.targetColor = DEFAULT_TEXT_COLOR
-        setTextHovered(false)
+        setTextHovered(null)
     }
 
     const handleClick = (event, link) => {
@@ -78,6 +79,16 @@ export default function FloorMenu() {
         router.push(link.href)
         setMenutextClicked(link.href)
     }
+
+    useEffect(() => {
+        return () => {
+            if (whooshRef.current) {
+                whooshRef.current.pause()
+                whooshRef.current.src = ''
+                whooshRef.current = null
+            }
+        }
+    }, [])
 
     useFrame(() => {
         materialsRef.current.forEach((material, index) => {
@@ -113,9 +124,14 @@ export default function FloorMenu() {
             ref={groupRef}
             position={[rubic_config.cube_size * 2.79, 0.01, rubic_config.cube_size * 2.79]}
             rotation-x={-Math.PI / 2}
-            onPointerEnter={() => {
+            onPointerEnter={(event) => {
                 if (materialsRef.current.some(m => m && m.opacity > INTERACTION_OPACITY_THRESHOLD)) {
                     setGroupHovered(true)
+                    if (!whooshRef.current) whooshRef.current = new Audio('/Audio/whoosh.mp3')
+                    whooshRef.current.volume = 0.04    
+                    whooshRef.current.currentTime = 0
+                    whooshRef.current.play().catch(() => {})
+                    event.stopPropagation()
                 }
             }}
             onPointerLeave={() => setGroupHovered(false)}
@@ -129,7 +145,7 @@ export default function FloorMenu() {
                     fontSize={0.08}
                     anchorX='left'
                     anchorY='top'
-                    onPointerEnter={handlePointerEnter}
+                    onPointerEnter={(e) => handlePointerEnter(e, link)}
                     onPointerLeave={handlePointerLeave}
                     onClick={(event) => handleClick(event, link)}
                 >
