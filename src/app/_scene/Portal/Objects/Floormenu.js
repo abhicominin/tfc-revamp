@@ -58,6 +58,7 @@ export default function FloorMenu() {
     const setTextHovered = useSceneStore((state) => state.setTextHovered)
     const setGroupHovered = useSceneStore((state) => state.setGroupHovered)
     const setMenutextClicked = useSceneStore((state) => state.setMenutextClicked)
+    const servicePageScrollOffset = useSceneStore((state) => state.servicePageScrollOffset)
 
     const handlePointerEnter = (event, link) => {
         const material = event.object.material
@@ -106,11 +107,15 @@ export default function FloorMenu() {
             }
 
             material.userData.targetOpacity = getTargetOpacity(pathname, link.href)
+            // On /Service, fade out as user scrolls into footer
+            if (pathname === '/Service' && link.href === '/Service') {
+                material.userData.targetOpacity = Math.max(0, 1 - servicePageScrollOffset)
+            }
             material.color.lerp(material.userData.targetColor, 0.12)
             material.opacity += (material.userData.targetOpacity - material.opacity) * 0.12
         })
 
-        const targetScale = pathname === '/Service' ? 1.8 : 1.0
+        const targetScale = pathname === '/Service' ? 1.8 - 0.8 * servicePageScrollOffset : 1.0
         textRefs.current.forEach((mesh) => {
             if (!mesh) return
             mesh.scale.x += (targetScale - mesh.scale.x) * 0.1

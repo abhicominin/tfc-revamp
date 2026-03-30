@@ -44,7 +44,7 @@ export default function RootLayout({ children }) {
         <Menu />
         <DynamicScene />
         {children}
-        <Script id="chat-widget-config" strategy="beforeInteractive">
+        {/* <Script id="chat-widget-config" strategy="beforeInteractive">
           {`window.chatWidgetConfig = {
             companyId: 1,
             apiBaseUrl: 'https://chatbotapi.tfcmockup.com',
@@ -54,7 +54,7 @@ export default function RootLayout({ children }) {
             welcomeMessage: '👋 I am Vera, your AI assistant. I am here to assist you. How can I help you today? 😊?'
           };`}
         </Script>
-        <Script src="https://chatbotapi.tfcmockup.com/public/widget/chat-widget.js?v=3.8" strategy="afterInteractive" />
+        <Script src="https://chatbotapi.tfcmockup.com/public/widget/chat-widget.js?v=3.8" strategy="afterInteractive" /> */}
       </body>
     </html>
   );

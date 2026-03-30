@@ -9,6 +9,9 @@ const useSceneStore = create((set) => ({
 
   menutextClicked: null,
   setMenutextClicked: (menutextClicked) => set({ menutextClicked }),
+
+  servicePageScrollOffset: 0,
+  setServicePageScrollOffset: (servicePageScrollOffset) => set({ servicePageScrollOffset }),
 }));
 
 export default useSceneStore;

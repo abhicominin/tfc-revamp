@@ -46,6 +46,9 @@ const Camera = forwardRef(({ transitionSpring }, ref) => {
     const prevPathnameRef = useRef(pathname);
     const hasProjectTransition = Boolean(transitionSpring?.progress);
     const groupHovered = useSceneStore((state) => state.groupHovered);
+    const servicePageScrollOffset = useSceneStore((state) => state.servicePageScrollOffset);
+    // Smoothed version of servicePageScrollOffset — lerped toward target each frame
+    const smoothedServiceOffsetRef = useRef(0);
 
     // Snapshot of camera state when a /Project transition begins — used as lerp "from"
     const transitionFromRef = useRef(toSpringTarget(DEFAULT_CONFIG));
@@ -130,6 +133,19 @@ const Camera = forwardRef(({ transitionSpring }, ref) => {
             lookX = flx + (tc.lookAt[0] - flx) * p;
             lookY = fly + (tc.lookAt[1] - fly) * p;
             lookZ = flz + (tc.lookAt[2] - flz) * p;
+        } else if (pathname === '/Service' && (servicePageScrollOffset > 0 || smoothedServiceOffsetRef.current > 0.001)) {
+            // Smooth the raw scroll offset — lerp toward target each frame
+            smoothedServiceOffsetRef.current += (servicePageScrollOffset - smoothedServiceOffsetRef.current) * 0.06;
+            const p = Math.min(Math.max(smoothedServiceOffsetRef.current, 0), 1);
+            const sc = CAMERA_CONFIG['/Service'];
+            const dc = DEFAULT_CONFIG;
+            baseZoom = sc.zoom + (dc.zoom - sc.zoom) * p;
+            baseX = sc.position[0] + (dc.position[0] - sc.position[0]) * p;
+            baseY = sc.position[1] + (dc.position[1] - sc.position[1]) * p;
+            baseZ = sc.position[2] + (dc.position[2] - sc.position[2]) * p;
+            lookX = sc.lookAt[0] + (dc.lookAt[0] - sc.lookAt[0]) * p;
+            lookY = sc.lookAt[1] + (dc.lookAt[1] - sc.lookAt[1]) * p;
+            lookZ = sc.lookAt[2] + (dc.lookAt[2] - sc.lookAt[2]) * p;
         } else {
             baseZoom = spring.zoom.get();
             baseX = spring.px.get();

@@ -51,7 +51,7 @@ export default function Contacts() {
           animate="show"
         >
           <motion.div variants={columnVariants} className="basis-1/3 h-full flex flex-col justify-between">
-            <motion.h1 variants={headingVariants} className="text-[120px] font-futura-light translate-y-[260px] translate-x-[20px] select-none">CONTACT</motion.h1>
+            <motion.h1 variants={headingVariants} className="text-[120px] font-futura-light translate-y-[260px] translate-x-[20px] select-none justify-center">CONTACT</motion.h1>
             <motion.span variants={itemVariants} className='leading-[24px] text-[16px] font-montserrat-medium select-none'>Tell us what you're building, <br /> rethinking, or struggling with.</motion.span>
           </motion.div>
           <motion.div variants={columnVariants} className="basis-1/3 h-[70%] font-montserrat-medium gap-[24px] flex flex-col text-[16px] justify-center pl-[80px] pointer-events-auto">

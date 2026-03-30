@@ -25,35 +25,6 @@ const _reverseCorrectionQuat = new THREE.Quaternion().setFromEuler(
     new THREE.Euler(0, Math.PI, 0)
 )
 
-function createFlightCurveService() {
-    const curve = new THREE.Curve()
-    const radius = 0.2
-    const height = 1.0
-    const matrix = new THREE.Matrix4()
-    const euler = new THREE.Euler(
-        MathUtils.degToRad(250),
-        MathUtils.degToRad(0),
-        MathUtils.degToRad(70)
-    )
-    
-    matrix.makeRotationFromEuler(euler)
-    matrix.setPosition(new THREE.Vector3(0.85, -0.25, 0.0))
-    matrix.scale(new THREE.Vector3(0.5, 0.5, -5))
-    
-    curve.getPoint = (t, target = new THREE.Vector3()) => {
-        const angle = t * Math.PI * 0.5
-        const x = radius * Math.cos(angle)
-        const y = height * Math.sin(angle)
-        const z = radius * Math.sin(angle)
-        return target.set(x, y, z).applyMatrix4(matrix)
-    }
-    
-    const path = new THREE.CurvePath()
-    path.add(curve)
-    path.frames = path.computeFrenetFrames(200, true)
-    return path
-}
-
 function createFlightCurve() {
     const curve = new THREE.Curve()
     const radius = 1.0
@@ -120,11 +91,8 @@ export default function FlyingBird(){
     const depthMaterialsRef = useRef([])
 
     const flightCurve = useMemo(() => {
-        if (pathname === '/Service') {
-            return createFlightCurveService()
-        }
         return createFlightCurve()
-    }, [pathname])
+    }, [])
     const birdRef = useRef(null)
     const sRef = useRef({ progress: 0, returning: false, waitTimer: 0 })
     const positionRef = useRef(new THREE.Vector3())
@@ -304,7 +272,7 @@ export default function FlyingBird(){
       <>
         <primitive
          ref={birdRef}
-         scale={pathname === '/Service' ? 0.2 : 0.55}
+         scale={0.55}
          object={scene}
         />
 
