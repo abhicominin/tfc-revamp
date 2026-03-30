@@ -31,15 +31,3 @@ body {
 ::-webkit-scrollbar {
    display: none;
 }
-
-.column-one {
-   background-color: rgba(131, 131, 132, 0.8);
-}
-
-.column-two {
-   background-color: rgba(32, 31, 31, 0.8);
-}
-
-.column-three {
-   background-color: rgba(10, 10, 10, 0.8);
-}

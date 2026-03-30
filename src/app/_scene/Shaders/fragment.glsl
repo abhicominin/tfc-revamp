@@ -63,7 +63,8 @@ vec3 rgbShift(sampler2D tex, vec2 uv, float strength) {
 // ---------------------------------------------------------------------------
 vec3 grayscale(vec3 color, float amount) {
     float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
-    return mix(color, vec3(luma), amount);
+    // Darken the gray target slightly (0.78 = ~22% darker)
+    return mix(color, vec3(luma * (1.0 - amount * 0.22)), amount);
 }
 
 // ---------------------------------------------------------------------------

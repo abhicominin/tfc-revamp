@@ -40,14 +40,14 @@ export default function Panel() {
             <div className="basis-1/6 w-full justify-center items-end flex text-[24px] font-montserrat-medium">
                <span>Choose the situation that best describes you.</span>
             </div>
-            <div className="flex flex-row basis-5/6 w-full items-center">
-             <section className="column-one basis-1/3 h-1/2">
+            <div className="flex flex-row basis-5/6 h-full w-full items-center">
+             <section className="column-one basis-1/3 h-1/2 bg-[#838384]/80">
  
              </section>
-             <section className="column-two basis-1/3 h-1/2">
+             <section className="column-two basis-1/3 h-1/2 bg-[#201F1F]/80">
  
              </section>
-             <section className="column-three basis-1/3 h-1/2">
+             <section className="column-three basis-1/3 h-1/2 bg-[#0A0A0A]/80">
  
              </section>
             </div>
