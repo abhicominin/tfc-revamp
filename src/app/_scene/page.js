@@ -34,7 +34,7 @@ export default function Scene() {
            >
                 <Preload all />
                 <Main />
-                {process.env.NODE_ENV === 'development' && <Perf position="top-left" />}
+                {/* {process.env.NODE_ENV === 'development' && <Perf position="top-left" />} */}
                 <OrthographicCamera makeDefault position={[0, 0, 1]} />
            </Canvas>
          </main>

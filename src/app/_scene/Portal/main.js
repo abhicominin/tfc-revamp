@@ -27,6 +27,7 @@ const PortalSetup = () => {
   const pathname = usePathname();
 
   const groupHovered = useSceneStore((state) => state.groupHovered);
+  const servicePageScrollOffset = useSceneStore((state) => state.servicePageScrollOffset);
 
   const { active, progress } = useProgress();
   const transitionValue = useRef(0);
@@ -119,6 +120,17 @@ const PortalSetup = () => {
       transitionValue.current = Math.min(transitionValue.current + delta * 0.21, 1);
       mesh.current.material.uniforms.uInitialTransition.value = transitionValue.current;
     }
+
+    mesh.current.material.uniforms.uGrayScale.value = THREE.MathUtils.lerp(
+      mesh.current.material.uniforms.uGrayScale.value,
+      servicePageScrollOffset,
+      0.08
+    );
+    mesh.current.material.uniforms.uBrighness.value = THREE.MathUtils.lerp(
+      mesh.current.material.uniforms.uBrighness.value,
+      1.0 - servicePageScrollOffset,
+      0.08
+    );
 
     // Animate effect when hovering over menu text
     const isService = pathname === "/Service";

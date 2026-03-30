@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react'
 import { useFrame } from "@react-three/fiber";
 import { usePathname } from "next/navigation";
 import { ASSETS } from '@/app/asset'
+import useSceneStore from '../../scenestore'
 
 // Displacement chunks shared between the visible material and the depth (shadow) material
 // so they always move in lockstep and the shadow never detaches from the mesh.
@@ -21,13 +22,14 @@ const VERT_DISPLACEMENT = `
 `;
 
 const DEFAULT_POSITION = new THREE.Vector3(0.32, 0.58, 0.0);
-const SERVICE_POSITION = new THREE.Vector3(0.20, 0.2, 0.0);
+const SERVICE_POSITION = new THREE.Vector3(0.3, 0.2, 0.0);
 const DEFAULT_ROTATION_Z = THREE.MathUtils.degToRad(-75);
-const SERVICE_ROTATION_Z = THREE.MathUtils.degToRad(-80);
+const SERVICE_ROTATION_Z = THREE.MathUtils.degToRad(-90);
 const DEFAULT_SHADOW_OPACITY = 0.65;
 
 export default function Plant() {
   const pathname = usePathname();
+  const servicePageScrollOffset = useSceneStore((state) => state.servicePageScrollOffset);
   const sourceMap = useTexture(ASSETS.ASSETS.TEXTURES.BRANCH);
 
   const map = useMemo(() => {
@@ -56,10 +58,23 @@ export default function Plant() {
     const t = clock.elapsedTime;
 
     if (meshRef.current) {
-      meshRef.current.position.lerp(targetPositionRef.current, 0.08);
+      // When on /Service with scroll offset, lerp target back toward default
+      const isService = pathname === '/Service';
+      const p = isService ? servicePageScrollOffset : 0;
+      const scrollTargetX = SERVICE_POSITION.x + (DEFAULT_POSITION.x - SERVICE_POSITION.x) * p;
+      const scrollTargetY = SERVICE_POSITION.y + (DEFAULT_POSITION.y - SERVICE_POSITION.y) * p;
+      const scrollTargetZ = SERVICE_POSITION.z + (DEFAULT_POSITION.z - SERVICE_POSITION.z) * p;
+      const scrollTargetRot = SERVICE_ROTATION_Z + (DEFAULT_ROTATION_Z - SERVICE_ROTATION_Z) * p;
+
+      const finalTarget = isService
+        ? new THREE.Vector3(scrollTargetX, scrollTargetY, scrollTargetZ)
+        : targetPositionRef.current;
+      const finalRotZ = isService ? scrollTargetRot : targetRotationZRef.current;
+
+      meshRef.current.position.lerp(finalTarget, 0.08);
       meshRef.current.rotation.z = THREE.MathUtils.lerp(
         meshRef.current.rotation.z,
-        targetRotationZRef.current,
+        finalRotZ,
         0.08
       );
     }
